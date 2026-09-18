@@ -1,0 +1,13 @@
+fastapi==0.109.0
+uvicorn==0.27.0
+python-multipart
+torch==2.1.2
+torchvision==0.16.2
+segmentation-models-pytorch
+opencv-python-headless
+scikit-learn
+pandas
+numpy
+pillow
+scipy
+gdown
