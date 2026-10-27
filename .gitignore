@@ -8,3 +8,5 @@ build/
 .env
 .env.local
 *.log
+.bolt/
+drive_import/
