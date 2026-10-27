@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, Radio, Brain, Zap } from 'lucide-react';
+import { Activity, Radio, Brain, Zap, Globe } from 'lucide-react';
 import { StatusDot } from './StatusDot';
 
 interface CommandBarProps {
@@ -8,9 +8,10 @@ interface CommandBarProps {
   sarAvailable: boolean;
   unetLoaded: boolean;
   onInvestigate: () => void;
+  onOpenLanding?: () => void;
 }
 
-export function CommandBar({ online, totalVessels, sarAvailable, unetLoaded, onInvestigate }: CommandBarProps) {
+export function CommandBar({ online, totalVessels, sarAvailable, unetLoaded, onInvestigate, onOpenLanding }: CommandBarProps) {
   const [clock, setClock] = useState('');
 
   useEffect(() => {
@@ -89,12 +90,22 @@ export function CommandBar({ online, totalVessels, sarAvailable, unetLoaded, onI
         </div>
       </div>
 
-      {/* Right: clock + button */}
+      {/* Right: clock + buttons */}
       <div className="flex items-center gap-3 shrink-0">
         <div className="flex items-center gap-1.5">
           <Activity size={12} className="text-muted" />
           <span className="metric-value text-xs text-muted">{clock}</span>
         </div>
+        {onOpenLanding && (
+          <button
+            onClick={onOpenLanding}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[rgba(0,212,255,0.06)] hover:bg-[rgba(0,212,255,0.16)] border border-cyan-dim/60 text-[#00D4FF] text-xs font-semibold uppercase tracking-wider transition-all"
+            title="Return to 3D Earth Mission Portal"
+          >
+            <Globe size={13} />
+            <span className="hidden sm:inline">3D Earth</span>
+          </button>
+        )}
         <button
           onClick={onInvestigate}
           className="px-3 py-1.5 rounded-md bg-[rgba(0,212,255,0.12)] hover:bg-[rgba(0,212,255,0.2)] border border-cyan-dim text-[#00D4FF] text-xs font-semibold uppercase tracking-wider transition-all"

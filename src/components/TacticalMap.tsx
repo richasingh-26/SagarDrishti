@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { Layers, Compass, ArrowUpRight, ShieldAlert, Navigation } from 'lucide-react';
 import type { Vessel } from '@/lib/api';
 
 interface TacticalMapProps {
@@ -12,28 +13,42 @@ interface TacticalMapProps {
 const DEFAULT_MAP_CENTER: [number, number] = [103.8, 1.25];
 const DEFAULT_MAP_ZOOM = 9;
 
-const OSM_RASTER_STYLE: maplibregl.StyleSpecification = {
+const SATELLITE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    'osm-tiles': {
+    'satellite-tiles': {
       type: 'raster',
       tiles: [
-        'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-        'https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-        'https://c.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       ],
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
-      maxzoom: 19,
+      attribution: '© Esri, Maxar, Earthstar Geographics',
+      maxzoom: 18,
+    },
+    'labels-tiles': {
+      type: 'raster',
+      tiles: [
+        'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      ],
+      tileSize: 256,
+      maxzoom: 18,
     },
   },
   layers: [
     {
-      id: 'osm-raster',
+      id: 'satellite-layer',
       type: 'raster',
-      source: 'osm-tiles',
+      source: 'satellite-tiles',
       minzoom: 0,
-      maxzoom: 19,
+      maxzoom: 18,
+    },
+    {
+      id: 'labels-layer',
+      type: 'raster',
+      source: 'labels-tiles',
+      minzoom: 0,
+      maxzoom: 18,
+      paint: { 'raster-opacity': 0.7 },
     },
   ],
 };
@@ -57,16 +72,21 @@ export function TacticalMap({ vessels, primeSuspectName, onVesselClick }: Tactic
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [hovered, setHovered] = useState<Vessel | null>(null);
+  const [is3D, setIs3D] = useState(true);
+  const [showTelemetry, setShowTelemetry] = useState(true);
 
-  // --- Initialize map exactly once ---
+  // --- Initialize map exactly once with dramatic 3D aerial perspective ---
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: OSM_RASTER_STYLE,
+      style: SATELLITE_STYLE,
       center: DEFAULT_MAP_CENTER,
       zoom: DEFAULT_MAP_ZOOM,
+      pitch: 48,
+      bearing: -18,
+      maxPitch: 70,
       attributionControl: false,
     });
 
@@ -82,6 +102,17 @@ export function TacticalMap({ vessels, primeSuspectName, onVesselClick }: Tactic
       setMapReady(false);
     };
   }, []);
+
+  const togglePerspective = () => {
+    if (!mapRef.current) return;
+    const next = !is3D;
+    setIs3D(next);
+    mapRef.current.easeTo({
+      pitch: next ? 48 : 0,
+      bearing: next ? -18 : 0,
+      duration: 1200,
+    });
+  };
 
   // --- Center map dynamically when new dataset is loaded ---
   useEffect(() => {
@@ -247,14 +278,14 @@ export function TacticalMap({ vessels, primeSuspectName, onVesselClick }: Tactic
       const p = f.properties as { name: string; mmsi: string; speed: number; anomaly_score: number; type?: string };
       const prime = primeSuspectName !== undefined && p.name === primeSuspectName;
       const color = prime ? '#FFD700' : p.anomaly_score > 0.5 ? '#FF8C00' : '#0FB9B1';
-      new maplibregl.Popup({ maxWidth: '240px' })
+      new maplibregl.Popup({ maxWidth: '260px', className: 'dark-popup' })
         .setLngLat(coords)
         .setHTML(
-          `<div style="font-family:Inter,sans-serif;padding:6px">
+          `<div style="font-family:Inter,sans-serif;padding:8px 10px;background:rgba(7,15,30,0.92);backdrop-filter:blur(12px);border:1px solid rgba(0,212,255,0.15);border-radius:10px;color:#fff">
             <div style="font-size:13px;font-weight:600;color:${color};margin-bottom:4px">${prime ? '★ ' : ''}${p.name}</div>
-            <div style="font-size:11px;color:#444">MMSI: <b>${p.mmsi}</b></div>
-            <div style="font-size:11px;color:#444">Type: <b>${p.type || 'Vessel'}</b></div>
-            <div style="font-size:11px;color:#444">Speed: <b>${p.speed} kn</b></div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.55)">MMSI: <b style="color:#fff">${p.mmsi}</b></div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.55)">Type: <b style="color:#fff">${p.type || 'Vessel'}</b></div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.55)">Speed: <b style="color:#fff">${p.speed} kn</b></div>
             <div style="font-size:11px;color:${color}">Anomaly: <b>${((p.anomaly_score || 0) * 100).toFixed(0)}%</b></div>
           </div>`
         )
@@ -387,6 +418,61 @@ export function TacticalMap({ vessels, primeSuspectName, onVesselClick }: Tactic
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="absolute inset-0 rounded-lg overflow-hidden" />
+
+      {/* Floating 3D/2D Perspective Toggle */}
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+        <button
+          onClick={togglePerspective}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(7,15,30,0.85)] hover:bg-[rgba(7,15,30,0.95)] border border-cyan-dim/60 text-xs font-semibold text-[#00D4FF] backdrop-blur-md shadow-lg transition-all"
+          title="Toggle 3D Aerial Perspective"
+        >
+          <Compass size={13} className={is3D ? 'rotate-45 transition-transform' : ''} />
+          <span>{is3D ? '3D Aerial View' : '2D Plan View'}</span>
+        </button>
+      </div>
+
+      {/* Floating Tactical Glassmorphic Telemetry Card (Inspired by Ortho 3D Map) */}
+      {showTelemetry && (
+        <div className="absolute bottom-4 right-4 z-10 w-64 rounded-2xl bg-[rgba(10,22,40,0.78)] backdrop-blur-xl border border-white/10 p-4 shadow-[0_12px_36px_rgba(0,0,0,0.55)] animate-fade-in transition-all">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-[0.6875rem] font-medium tracking-wider uppercase text-white/50">
+                Monitored Corridor
+              </div>
+              <div className="text-sm font-semibold text-white tracking-tight mt-0.5">
+                Singapore Strait TSS
+              </div>
+            </div>
+            <button
+              onClick={() => setShowTelemetry(false)}
+              className="text-white/40 hover:text-white transition-colors"
+              title="Minimize Telemetry"
+            >
+              <ArrowUpRight size={16} />
+            </button>
+          </div>
+
+          <div className="mt-4 flex items-baseline justify-between">
+            <div>
+              <div className="text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-white/90 to-[#00D4FF] bg-clip-text text-transparent">
+                87<span className="text-lg font-normal text-[#00D4FF]">%</span>
+              </div>
+              <div className="text-[0.625rem] text-white/45 mt-0.5">
+                Attribution Confidence Index
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.625rem] font-medium bg-[#FF8C00]/15 text-[#FF8C00] border border-[#FF8C00]/30">
+                <ShieldAlert size={10} />
+                High Alert
+              </span>
+              <div className="text-[0.625rem] text-white/40 mt-1">
+                {vessels.length.toLocaleString()} ships live
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="absolute bottom-3 left-3 glass-panel px-3 py-2 z-10 space-y-1.5">

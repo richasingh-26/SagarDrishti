@@ -8,11 +8,13 @@ import { Evidence } from '@/pages/Evidence';
 import { FuturePrediction } from '@/pages/FuturePrediction';
 import { SpillDetection } from '@/pages/SpillDetection';
 import { FleetBuilder } from '@/pages/FleetBuilder';
+import { Landing } from '@/pages/Landing';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import type { Vessel } from '@/lib/api';
 
 function App() {
+  const [inLanding, setInLanding] = useState(true);
   const [page, setPage] = useState<PageId>('dashboard');
   const {
     online,
@@ -41,6 +43,10 @@ function App() {
     setPage('vessels');
   }, []);
 
+  if (inLanding) {
+    return <Landing onEnter={() => setInLanding(false)} />;
+  }
+
   return (
     <div className="h-screen flex flex-col bg-bg-base overflow-hidden">
       <CommandBar
@@ -49,6 +55,7 @@ function App() {
         sarAvailable={health?.sar_available === true}
         unetLoaded={health?.unet === true}
         onInvestigate={handleInvestigate}
+        onOpenLanding={() => setInLanding(true)}
       />
       <Sidebar
         active={page}
