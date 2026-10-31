@@ -69,14 +69,14 @@ export function Dashboard({
   const displayEvents =
     rawEvents.length > 0
       ? rawEvents.map((e) => ({
-          time: e.time,
-          text: e.text,
-          color:
-            e.level === 'danger' ? '#FF4444' :
+        time: e.time,
+        text: e.text,
+        color:
+          e.level === 'danger' ? '#FF4444' :
             e.level === 'warning' ? '#FFA500' :
-            e.level === 'success' ? '#00FF88' :
-            '#00D4FF',
-        }))
+              e.level === 'success' ? '#00FF88' :
+                '#00D4FF',
+      }))
       : defaultEvents;
 
   return (
