@@ -273,6 +273,128 @@ export function Dashboard({
           </div>
         </div>
 
+        {/* EXECUTIVE 4-STEP INCIDENT LIFECYCLE (PLAIN-ENGLISH SUMMARY) */}
+        <div className="glass-panel p-4 rounded-2xl border border-white/[0.1] bg-gradient-to-r from-[#070D14] via-[#0A1420] to-[#070D14]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#5FE38A] animate-ping" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                ACTIVE OIL SPILL INCIDENT LIFECYCLE • SINGAPORE STRAIT
+              </span>
+              <span className="text-[11px] text-[#94A3B8] hidden lg:inline">
+                (Click any step to inspect evidence)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold text-[#5FE38A] bg-[#5FE38A]/10 px-2 py-0.5 rounded border border-[#5FE38A]/30">
+                CASE #SAG-2026-001
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Step 1: Spill Detected */}
+            <button
+              onClick={() => onNavigate('spill-detection')}
+              className="p-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.08] hover:border-[#EF4444]/60 text-left transition-all group flex flex-col justify-between space-y-2 cursor-pointer shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold text-[#EF4444] bg-[#EF4444]/15 px-2 py-0.5 rounded border border-[#EF4444]/30">
+                  STEP 1 • DETECTED
+                </span>
+                <Satellite size={16} className="text-[#EF4444]" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white group-hover:text-[#EF4444] transition-colors">
+                  Oil Spill Spotted
+                </div>
+                <div className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">
+                  Satellite radar confirmed a 3.2 km² dark slick smoothing ocean waves.
+                </div>
+              </div>
+              <div className="text-[10px] font-mono font-semibold text-[#EF4444] flex items-center gap-1 pt-1">
+                <span>View Radar Mask</span>
+                <ArrowUpRight size={11} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </div>
+            </button>
+
+            {/* Step 2: Fleet Scanned */}
+            <button
+              onClick={() => onNavigate('vessels')}
+              className="p-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.08] hover:border-[#5BC0BE]/60 text-left transition-all group flex flex-col justify-between space-y-2 cursor-pointer shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold text-[#5BC0BE] bg-[#5BC0BE]/15 px-2 py-0.5 rounded border border-[#5BC0BE]/30">
+                  STEP 2 • 10,001 SHIPS
+                </span>
+                <Radio size={16} className="text-[#5BC0BE]" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white group-hover:text-[#5BC0BE] transition-colors">
+                  Fleet Monitored Live
+                </div>
+                <div className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">
+                  Tracked AIS transponders; 500 ships flagged for abnormal speed or routes.
+                </div>
+              </div>
+              <div className="text-[10px] font-mono font-semibold text-[#5BC0BE] flex items-center gap-1 pt-1">
+                <span>Inspect Fleet Track</span>
+                <ArrowUpRight size={11} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </div>
+            </button>
+
+            {/* Step 3: Prime Suspect */}
+            <button
+              onClick={() => onNavigate('evidence')}
+              className="p-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.08] hover:border-[#FFD700]/60 text-left transition-all group flex flex-col justify-between space-y-2 cursor-pointer shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold text-[#FFD700] bg-[#FFD700]/15 px-2 py-0.5 rounded border border-[#FFD700]/30">
+                  STEP 3 • 68% MATCH
+                </span>
+                <Shield size={16} className="text-[#FFD700]" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white group-hover:text-[#FFD700] transition-colors">
+                  Culprit Ship Flagged
+                </div>
+                <div className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">
+                  Tanker MTT SENARI had suspicious 0-kn speed drop in origin zone during dumping.
+                </div>
+              </div>
+              <div className="text-[10px] font-mono font-semibold text-[#FFD700] flex items-center gap-1 pt-1">
+                <span>Read Evidence Dossier</span>
+                <ArrowUpRight size={11} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </div>
+            </button>
+
+            {/* Step 4: Spill Forecast */}
+            <button
+              onClick={() => onNavigate('prediction')}
+              className="p-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.08] hover:border-[#5FE38A]/60 text-left transition-all group flex flex-col justify-between space-y-2 cursor-pointer shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-bold text-[#5FE38A] bg-[#5FE38A]/15 px-2 py-0.5 rounded border border-[#5FE38A]/30">
+                  STEP 4 • 48H DRIFT
+                </span>
+                <Waves size={16} className="text-[#5FE38A]" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white group-hover:text-[#5FE38A] transition-colors">
+                  Spill Drift Modeled
+                </div>
+                <div className="text-[11px] text-[#94A3B8] mt-0.5 leading-snug">
+                  Currents pushing slick East-Southeast toward coastline; response booms ready.
+                </div>
+              </div>
+              <div className="text-[10px] font-mono font-semibold text-[#5FE38A] flex items-center gap-1 pt-1">
+                <span>Simulate Movement</span>
+                <ArrowUpRight size={11} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </div>
+            </button>
+          </div>
+        </div>
+
         {/* SECTION A: Full-width Tactical Sea Map (SatQuery Glass Container) */}
         <div className="relative h-[560px] glass-panel overflow-hidden border border-white/[0.12] rounded-2xl">
           <TacticalSeaView

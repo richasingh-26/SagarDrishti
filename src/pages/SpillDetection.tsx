@@ -280,6 +280,31 @@ export function SpillDetection() {
           </div>
         </div>
 
+        {/* NON-TECHNICAL EXECUTIVE BRIEFING BANNER */}
+        <div className="p-4 rounded-xl bg-gradient-to-r from-[#5FE38A]/10 via-[#070D14] to-transparent border border-[#5FE38A]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#5FE38A]/20 text-[#5FE38A] flex items-center justify-center shrink-0 mt-0.5 border border-[#5FE38A]/30">
+              <Sparkles size={16} />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-2">
+                <span>How to Read This Satellite Image in 10 Seconds</span>
+                <span className="text-[10px] font-mono font-semibold text-[#5FE38A] bg-[#5FE38A]/10 px-2 py-0.5 rounded">
+                  Plain-English Guide
+                </span>
+              </div>
+              <p className="text-[11px] text-[#CBD5E1] mt-0.5 leading-relaxed">
+                Normal ocean water has small ripples that reflect radar back brightly (grey textures). Oil slick creates a calm, glass-like surface that reflects radar away, showing up as a distinct <strong>dark shape</strong> in the center. Click <strong>"Run U-Net++ Mask"</strong> to color the spill, or <strong>"Analyze with Gemma 4 Vision"</strong> to generate a full report.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30 font-bold">
+              3.2 km² Spill Detected
+            </span>
+          </div>
+        </div>
+
         {/* 4 TELEMETRY KPI CARDS (Matching Dashboard) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1 */}

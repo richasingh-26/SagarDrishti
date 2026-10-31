@@ -26,6 +26,7 @@ export type PageId =
 interface NavItem {
   id: PageId;
   label: string;
+  sub?: string;
   icon: LucideIcon;
   badge?: number;
   goldStar?: boolean;
@@ -37,17 +38,18 @@ interface SidebarProps {
   onNavigate: (page: PageId) => void;
   anomalyCount: number;
   alertCount?: number;
+  onOpenGuide?: () => void;
 }
 
-export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
+export function Sidebar({ active, onNavigate, anomalyCount, onOpenGuide }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const items: NavItem[] = [
-    { id: 'dashboard', label: 'Command Center', icon: LayoutDashboard },
-    { id: 'vessels', label: 'AIS Fleet Track', icon: Ship, badge: anomalyCount },
-    { id: 'spill-detection', label: 'SAR AI Analysis', icon: ScanEye },
-    { id: 'fleet-builder', label: 'Custom Ship Studio', icon: SlidersHorizontal, isNew: true },
-    { id: 'scenario-builder', label: 'Drift Simulator', icon: FlaskConical },
-    { id: 'prediction', label: 'Spill Forecast', icon: TrendingUp },
+    { id: 'dashboard', label: 'Command Center', sub: 'Overview & Sea Map', icon: LayoutDashboard },
+    { id: 'vessels', label: 'AIS Fleet Track', sub: '10,001 Live Ships', icon: Ship, badge: anomalyCount },
+    { id: 'spill-detection', label: 'SAR AI Analysis', sub: 'Satellite Radar & AI', icon: ScanEye },
+    { id: 'fleet-builder', label: 'Custom Ship Studio', sub: 'Simulate Ships', icon: SlidersHorizontal, isNew: true },
+    { id: 'scenario-builder', label: 'Drift Simulator', sub: 'Currents & Winds', icon: FlaskConical },
+    { id: 'prediction', label: 'Spill Forecast', sub: '48h Movement Model', icon: TrendingUp },
   ];
 
   return (
@@ -75,7 +77,14 @@ export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
                 size={17}
                 className={isActive ? 'text-[#5FE38A]' : 'text-[#64748B]'}
               />
-              <span className="flex-1 truncate">{item.label}</span>
+              <div className="flex-1 min-w-0">
+                <span className="block truncate leading-snug">{item.label}</span>
+                {item.sub && (
+                  <span className="block text-[10px] text-[#64748B] font-normal leading-tight truncate">
+                    {item.sub}
+                  </span>
+                )}
+              </div>
               {item.isNew && (
                 <span className="px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold bg-[#D8B4FE]/15 text-[#D8B4FE] border border-[#D8B4FE]/30">
                   NEW
@@ -89,6 +98,18 @@ export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
             </button>
           );
         })}
+      </div>
+
+      {/* Quick Non-Technical Guide Button */}
+      <div className="mx-3 mb-2">
+        <button
+          onClick={onOpenGuide}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-[#5FE38A] bg-[#5FE38A]/10 hover:bg-[#5FE38A]/20 border border-[#5FE38A]/35 transition-all shadow-[0_0_12px_rgba(95,227,138,0.12)] cursor-pointer group"
+          title="How SagarDrishti Works (30-Second Plain-English Guide)"
+        >
+          <Sparkles size={13} className="text-[#5FE38A] group-hover:rotate-12 transition-transform" />
+          <span>How It Works (Guide)</span>
+        </button>
       </div>
 
       {/* Theme Switcher */}

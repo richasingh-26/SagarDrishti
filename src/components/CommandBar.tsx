@@ -13,6 +13,7 @@ interface CommandBarProps {
   onNavigate: (page: PageId) => void;
   onInvestigate: () => void;
   onOpenLanding?: () => void;
+  onOpenGuide?: () => void;
 }
 
 export function CommandBar({
@@ -24,6 +25,7 @@ export function CommandBar({
   onNavigate,
   onInvestigate,
   onOpenLanding,
+  onOpenGuide,
 }: CommandBarProps) {
   const { theme, setTheme } = useTheme();
   const [clock, setClock] = useState('');
@@ -192,6 +194,16 @@ export function CommandBar({
             <span className="text-[10px] font-mono">WHT</span>
           </button>
         </div>
+
+        {/* Quick 30-Second Guide for Non-Technical Visitors */}
+        <button
+          onClick={onOpenGuide}
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#5FE38A]/15 hover:bg-[#5FE38A]/25 text-[#5FE38A] border border-[#5FE38A]/40 text-xs font-bold transition-all shadow-[0_0_15px_rgba(95,227,138,0.2)] cursor-pointer group"
+          title="How SagarDrishti Works (30-Second Guide in Plain English)"
+        >
+          <Sparkles size={13} className="group-hover:rotate-12 transition-transform text-[#5FE38A]" />
+          <span>How It Works</span>
+        </button>
 
         <button onClick={onInvestigate} className="btn-sat-primary whitespace-nowrap text-xs px-3 py-1.5">
           <Shield size={13} />

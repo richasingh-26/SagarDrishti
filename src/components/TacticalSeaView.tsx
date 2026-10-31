@@ -46,6 +46,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, onVess
   const [zoom, setZoom] = useState(1.0);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [autoDrift, setAutoDrift] = useState(true);
+  const [showLegend, setShowLegend] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0 });
 
@@ -655,8 +656,65 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, onVess
         </button>
       </div>
 
+            {/* Non-Technical Map Guide / Interactive Legend */}
+      <div className="absolute top-4 left-44 z-20 hidden md:flex items-center gap-2 glass-panel px-3 py-1.5 border border-white/[0.1] rounded-xl text-[11px] text-[#94A3B8] pointer-events-none">
+        <span className="text-[#5FE38A] font-bold">💡 TIP:</span>
+        <span>Drag map to pan • Scroll to zoom • Click ships to inspect</span>
+      </div>
+
+      {/* Floating Tactical Legend (Bottom-Left) */}
+      <div className="absolute bottom-4 left-4 z-20 glass-panel p-2.5 rounded-xl border border-white/[0.12] shadow-xl backdrop-blur-xl max-w-xs transition-all">
+        <div className="flex items-center justify-between gap-3 pb-1.5 mb-1.5 border-b border-white/[0.08]">
+          <span className="text-[10px] font-mono font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#5FE38A]" />
+            MAP GUIDE
+          </span>
+          <button
+            onClick={() => setShowLegend(prev => !prev)}
+            className="text-[9px] font-mono text-[#94A3B8] hover:text-white transition-colors cursor-pointer"
+          >
+            {showLegend ? 'COLLAPSE' : 'EXPAND'}
+          </button>
+        </div>
+
+        {showLegend && (
+          <div className="space-y-1 text-[10px]">
+            <div className="flex items-center gap-2 text-white/90">
+              <span className="w-2.5 h-2.5 rounded-sm bg-[#EF4444] border border-[#EF4444]" />
+              <span className="font-semibold text-white">Red Area:</span>
+              <span className="text-[#CBD5E1]">Detected 3.2 km² Oil Slick</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/90">
+              <span className="w-2.5 h-2.5 rounded-full border border-dashed border-[#FFD700] bg-[#FFD700]/20" />
+              <span className="font-semibold text-white">Yellow Circle:</span>
+              <span className="text-[#CBD5E1]">Probable Spill Origin</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/90">
+              <span className="w-3 h-0.5 bg-[#FF8C00]" />
+              <span className="font-semibold text-white">Dotted Arrow:</span>
+              <span className="text-[#CBD5E1]">Current & Wind Drift Path</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/90">
+              <span className="text-[#FFD700] font-bold text-xs">★</span>
+              <span className="font-semibold text-[#FFD700]">Gold Star:</span>
+              <span className="text-[#CBD5E1]">Prime Suspect (MTT SENARI)</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/90">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FFA500]" />
+              <span className="font-semibold text-white">Orange Dot:</span>
+              <span className="text-[#CBD5E1]">Suspicious Ship (Speed Drop)</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/90">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#00D4FF]" />
+              <span className="font-semibold text-white">Cyan Dot:</span>
+              <span className="text-[#CBD5E1]">Normal Passing Traffic</span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Ocean Current Hydrodynamic Telemetry Pill (Bottom Left) */}
-      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 glass-panel px-3 py-1.5 pointer-events-none border border-white/[0.1] rounded-xl">
+      <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 glass-panel px-3 py-1.5 pointer-events-none border border-white/[0.1] rounded-xl">
         <Compass size={12} className="text-[#5FE38A] animate-spin-slow" />
         <span className="text-[10px] font-mono text-[#94A3B8]">SURFACE CURRENT:</span>
         <span className="text-[10px] font-mono font-bold text-[#5FE38A]">085° E-SE @ 1.80 kn</span>
