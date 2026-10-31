@@ -348,31 +348,9 @@ export function Landing({ onEnter }: LandingProps) {
       {/* 3. STICKY TOP NAVIGATION BAR */}
       <header className="sticky top-0 z-50 flex items-center justify-between px-6 md:px-10 py-4 backdrop-blur-2xl bg-[#060B10]/75 border-b border-white/[0.08] transition-all">
         <div className="flex items-center gap-3">
-          {/* Orbital Radar Mark */}
-          <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
-            <svg width="30" height="30" viewBox="0 0 28 28" fill="none">
-              <circle
-                cx="14"
-                cy="14"
-                r="11"
-                stroke="#5FE38A"
-                strokeWidth="1.8"
-                strokeDasharray="44 12"
-                className="opacity-90"
-              />
-              <circle cx="14" cy="14" r="5" fill="#5FE38A" />
-              <ellipse
-                cx="14"
-                cy="14"
-                rx="13"
-                ry="5"
-                stroke="#5FE38A"
-                strokeWidth="1.2"
-                transform="rotate(-25 14 14)"
-                strokeDasharray="28 8"
-                opacity="0.8"
-              />
-            </svg>
+          {/* Graviton Brand Mark */}
+          <div className="relative w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center shrink-0 border border-white/10 bg-black shadow-md">
+            <img src="/graviton-logo.png" alt="Graviton" className="w-full h-full object-contain" />
           </div>
           <div>
             <span className="text-[19px] font-extrabold tracking-tight text-white leading-tight">
@@ -1090,6 +1068,7 @@ export function Landing({ onEnter }: LandingProps) {
         {/* Tactical Footer */}
         <footer className="flex flex-col md:flex-row items-center justify-between pt-12 pb-6 text-xs text-[#64748B] gap-4">
           <div className="flex items-center gap-3">
+            <img src="/graviton-logo.png" alt="Graviton" className="w-5 h-5 rounded object-contain border border-white/10" />
             <span className="font-bold text-white tracking-tight">SagarDrishti</span>
             <span>·</span>
             <span>Maritime & Ocean Intelligence System</span>
