@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, Radio, Brain, Zap, Globe, Shield, User, Sparkles, Moon, Sun, Heart } from 'lucide-react';
+import { Activity, Radio, Brain, Zap, Globe, Shield, User, Sparkles, Moon, Sun } from 'lucide-react';
 import { StatusDot } from './StatusDot';
 import type { PageId } from './Sidebar';
 import { useTheme } from '@/context/ThemeContext';
@@ -190,18 +190,6 @@ export function CommandBar({
           >
             <Sun size={11} />
             <span className="text-[10px] font-mono">WHT</span>
-          </button>
-          <button
-            onClick={() => setTheme('pink')}
-            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-              theme === 'pink'
-                ? 'bg-[#EC4899] text-white shadow-[0_2px_8px_rgba(236,72,153,0.4)]'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-            title="Cyberpunk Neon Pink Theme"
-          >
-            <Heart size={11} />
-            <span className="text-[10px] font-mono">PNK</span>
           </button>
         </div>
 

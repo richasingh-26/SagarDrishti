@@ -10,7 +10,6 @@ import {
   Moon,
   Sun,
   Palette,
-  Heart,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
@@ -98,7 +97,7 @@ export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
           <span className="section-label">SYSTEM THEME</span>
           <Palette size={11} className="text-[#5FE38A]" />
         </div>
-        <div className="grid grid-cols-4 gap-1 p-0.5 rounded-lg bg-black/20 border border-white/[0.06]">
+        <div className="grid grid-cols-3 gap-1 p-0.5 rounded-lg bg-black/20 border border-white/[0.06]">
           <button
             onClick={() => setTheme('default')}
             className={`py-1 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
@@ -134,18 +133,6 @@ export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
           >
             <Sun size={10} />
             <span>Wht</span>
-          </button>
-          <button
-            onClick={() => setTheme('pink')}
-            className={`py-1 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-              theme === 'pink'
-                ? 'bg-[#EC4899] text-white shadow-sm'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-            title="Cyberpunk Neon Pink"
-          >
-            <Heart size={10} />
-            <span>Pnk</span>
           </button>
         </div>
       </div>
