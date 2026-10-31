@@ -56,6 +56,91 @@ interface FleetBuilderProps {
   onNavigateToDashboard?: () => void;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MARITIME WATER-ONLY POLYGON (Singapore Strait & surrounding sea)
+// Ships CANNOT be placed on land. Any waypoint must fall inside one of these
+// navigable water zones. Zones are conservative – well inside the sea.
+// ─────────────────────────────────────────────────────────────────────────────
+interface WaterZone {
+  name: string;
+  // lat/lon bounding box (fast first-pass filter)
+  latMin: number; latMax: number; lonMin: number; lonMax: number;
+  // optional inner exclusion zones (land masses that cut into bounding box)
+  exclude?: Array<{ latMin: number; latMax: number; lonMin: number; lonMax: number }>;
+}
+
+const NAVIGABLE_WATER_ZONES: WaterZone[] = [
+  {
+    // Singapore Strait TSS main channel (between Singapore island & Batam/Bintan)
+    name: 'Singapore Strait (Main Channel)',
+    latMin: 1.09, latMax: 1.38, lonMin: 103.50, lonMax: 104.15,
+    exclude: [
+      // Singapore Island main land mass
+      { latMin: 1.22, latMax: 1.48, lonMin: 103.62, lonMax: 104.01 },
+      // Sentosa + Pulau Brani
+      { latMin: 1.22, latMax: 1.26, lonMin: 103.80, lonMax: 103.88 },
+      // Batam Island (Indonesia)
+      { latMin: 1.00, latMax: 1.14, lonMin: 103.95, lonMax: 104.13 },
+      // Bintan Island coast (west tip)
+      { latMin: 1.05, latMax: 1.20, lonMin: 104.10, lonMax: 104.20 },
+      // Johor Bahru / Malaysian land
+      { latMin: 1.38, latMax: 1.60, lonMin: 103.55, lonMax: 104.20 },
+    ],
+  },
+  {
+    // Western Malacca approach / Philip Channel west
+    name: 'Philip Channel (West)',
+    latMin: 1.10, latMax: 1.30, lonMin: 103.35, lonMax: 103.62,
+  },
+  {
+    // Eastern Singapore Strait / St John's Channel
+    name: 'Eastern Strait',
+    latMin: 1.08, latMax: 1.28, lonMin: 104.10, lonMax: 104.40,
+  },
+];
+
+/**
+ * Returns true if (lat, lon) is over navigable open water for this region.
+ * Uses a fast bounding-box check + land-exclusion zones.
+ */
+function isOpenWater(lat: number, lon: number): boolean {
+  for (const zone of NAVIGABLE_WATER_ZONES) {
+    if (lat >= zone.latMin && lat <= zone.latMax && lon >= zone.lonMin && lon <= zone.lonMax) {
+      // Inside the zone's bounding box – check land exclusions
+      if (zone.exclude) {
+        const onLand = zone.exclude.some(
+          (ex) => lat >= ex.latMin && lat <= ex.latMax && lon >= ex.lonMin && lon <= ex.lonMax
+        );
+        if (onLand) return false;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Snaps a coordinate pair to the nearest open-water position by walking
+ * along a small spiral/grid around the original point.
+ * Falls back to a safe deep-water anchor if nothing is found.
+ */
+function snapToWater(lat: number, lon: number): { lat: number; lon: number } {
+  if (isOpenWater(lat, lon)) return { lat, lon };
+  // Search expanding rings (0.005° ≈ ~550m steps)
+  for (let r = 0.008; r <= 0.12; r += 0.008) {
+    for (let angle = 0; angle < 360; angle += 30) {
+      const rad = (angle * Math.PI) / 180;
+      const tryLat = lat + r * Math.cos(rad);
+      const tryLon = lon + r * Math.sin(rad);
+      if (isOpenWater(tryLat, tryLon)) {
+        return { lat: parseFloat(tryLat.toFixed(4)), lon: parseFloat(tryLon.toFixed(4)) };
+      }
+    }
+  }
+  // Hard fallback – centre of Singapore Strait
+  return { lat: 1.20, lon: 103.78 };
+}
+
 // Military-Grade Dark Canvas (ESRI Dark Base - 100% Free, Zero Watermarks, Clean Coastlines)
 const DARK_TACTICAL_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -227,6 +312,8 @@ export function FleetBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [apiConnected, setApiConnected] = useState<boolean>(true);
+  // Land-placement warning toast
+  const [landWarn, setLandWarn] = useState<string | null>(null);
 
   // Map & Markers Refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -354,13 +441,26 @@ export function FleetBuilder({
         map.getCanvas().style.cursor = '';
       });
 
-      // Map click for appending waypoints
+      // Map click for appending waypoints — blocked on land
       map.on('click', (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ['fleet-context-pts'] });
         if (features && features.length > 0) return;
 
         if (activeTabRef.current !== 'builder') return;
         const { lng, lat } = e.lngLat;
+
+        // ── Water-only enforcement ──────────────────────────────────────────
+        if (!isOpenWater(lat, lng)) {
+          setLandWarn('⚠ Cannot place waypoint on land. Click within the navigable sea lanes.');
+          setTimeout(() => setLandWarn(null), 3500);
+          // Flash the cursor red via canvas briefly
+          const canvas = map.getCanvas();
+          canvas.style.outline = '3px solid #FF4444';
+          setTimeout(() => { canvas.style.outline = ''; }, 500);
+          return;
+        }
+        // ───────────────────────────────────────────────────────────────────
+
         const nextTime = `T+${(waypointsRef.current.length + 1) * 30}m`;
         setWaypoints((prev) => [
           ...prev,
@@ -850,36 +950,36 @@ export function FleetBuilder({
     const vHeading = v.heading || 120;
     const rad = vHeading * (Math.PI / 180);
 
-    const generatedWaypoints: Waypoint[] = v.route && v.route.length > 0 ? v.route : [
-      {
-        lat: parseFloat((baseLat - 0.04 * Math.cos(rad)).toFixed(4)),
-        lon: parseFloat((baseLon - 0.04 * Math.sin(rad)).toFixed(4)),
+    // ── Water-only: snap the base position first ─────────────────────────
+    const baseSnapped = snapToWater(baseLat, baseLon);
+
+    // Helper: generate a candidate waypoint along heading and snap it to water
+    const makeWaterWaypoint = (
+      dlat: number,
+      dlon: number,
+      ts: string
+    ): Waypoint => {
+      const snapped = snapToWater(baseSnapped.lat + dlat, baseSnapped.lon + dlon);
+      return {
+        lat: snapped.lat,
+        lon: snapped.lon,
         speed: vSpeed,
         heading: vHeading,
-        timestamp: 'T-1h',
-      },
-      {
-        lat: parseFloat((baseLat - 0.02 * Math.cos(rad)).toFixed(4)),
-        lon: parseFloat((baseLon - 0.02 * Math.sin(rad)).toFixed(4)),
-        speed: vSpeed,
-        heading: vHeading,
-        timestamp: 'T-30m',
-      },
-      {
-        lat: parseFloat(baseLat.toFixed(4)),
-        lon: parseFloat(baseLon.toFixed(4)),
-        speed: vSpeed,
-        heading: vHeading,
-        timestamp: 'Current Pos',
-      },
-      {
-        lat: parseFloat((baseLat + 0.03 * Math.cos(rad)).toFixed(4)),
-        lon: parseFloat((baseLon + 0.03 * Math.sin(rad)).toFixed(4)),
-        speed: vSpeed,
-        heading: vHeading,
-        timestamp: 'T+30m',
-      },
-    ];
+        timestamp: ts,
+      };
+    };
+
+    const generatedWaypoints: Waypoint[] = v.route && v.route.length > 0
+      ? v.route.map((wp) => {
+          const s = snapToWater(wp.lat, wp.lon);
+          return { ...wp, lat: s.lat, lon: s.lon };
+        })
+      : [
+          makeWaterWaypoint(-0.04 * Math.cos(rad), -0.04 * Math.sin(rad), 'T-1h'),
+          makeWaterWaypoint(-0.02 * Math.cos(rad), -0.02 * Math.sin(rad), 'T-30m'),
+          { lat: baseSnapped.lat, lon: baseSnapped.lon, speed: vSpeed, heading: vHeading, timestamp: 'Current Pos' },
+          makeWaterWaypoint( 0.03 * Math.cos(rad),  0.03 * Math.sin(rad), 'T+30m'),
+        ];
 
     setWaypoints(generatedWaypoints);
     setLivePos(null);
@@ -1547,6 +1647,14 @@ export function FleetBuilder({
           <span>COG: <b className="text-[#38EF7D]">{heading}°</b></span>
         </div>
 
+        {/* Land-placement warning toast */}
+        {landWarn && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-[#FF4444]/70 bg-[rgba(30,5,5,0.92)] text-[#FF6666] text-xs font-mono font-bold shadow-2xl backdrop-blur-md animate-bounce-slow pointer-events-none">
+            <span className="text-[#FF4444] text-base">⛔</span>
+            {landWarn}
+          </div>
+        )}
+
         {/* Tactical Map Legend */}
         <div className="absolute bottom-4 left-4 z-10 glass-panel p-3.5 border border-cyan-dim space-y-2 text-[0.625rem] max-w-xs shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-cyan-dim/40 pb-1 mb-1">
@@ -1560,7 +1668,7 @@ export function FleetBuilder({
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#FFD700] border border-black shrink-0" />
-            <span className="text-white">Trajectory Waypoints (Click Map to Add)</span>
+            <span className="text-white">Trajectory Waypoints (Click Sea to Add · Land Blocked)</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-4 h-0.5 bg-[#00E5FF] shrink-0 border-t-2 border-dashed border-[#00E5FF]" />
