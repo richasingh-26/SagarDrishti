@@ -157,7 +157,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
     // Spatial de-cluttering: enforce realistic ~1.8 km separation in TSS
     // This prevents hundreds of vessels clumping together as an unrealistic blob
     const declutteredNormals: Vessel[] = [];
-    const MIN_SEP_KM = 1.8;
+    const MIN_SEP_KM = 2.8;
 
     for (const v of sortedNormals) {
       const nearPrime = primes.some((p) => haversineDistKm(v.lat, v.lon, p.lat, p.lon) < 1.4);
@@ -169,7 +169,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
       if (!nearPrime && !nearAnom && !nearNormal) {
         declutteredNormals.push(v);
       }
-      if (declutteredNormals.length >= 35) break;
+      if (declutteredNormals.length >= 18) break;
     }
 
     return { primeList: primes, anomList: anoms, normalList: declutteredNormals };
@@ -545,7 +545,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
                 y1={y}
                 x2={x - 2}
                 y2={y}
-                stroke="#00D4FF"
+                stroke="#5BC0BE"
                 strokeWidth="1"
                 strokeOpacity="0.4"
                 strokeDasharray="3 2"
@@ -557,7 +557,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
                   cy={y}
                   r={10}
                   fill="none"
-                  stroke="#00D4FF"
+                  stroke="#5BC0BE"
                   strokeWidth="1.5"
                   className="animate-ping"
                 />
@@ -566,7 +566,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
                 cx={x}
                 cy={y}
                 r={isSelected ? 4.8 : 3.6}
-                fill={isSelected ? '#FFFFFF' : '#00D4FF'}
+                fill={isSelected ? '#FFFFFF' : '#5BC0BE'}
                 stroke="#ffffff"
                 strokeWidth={isSelected ? 1.5 : 0.8}
                 opacity={isSelected ? 1 : 0.85}

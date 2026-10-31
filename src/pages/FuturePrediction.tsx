@@ -149,6 +149,65 @@ function ForecastMap({
     []
   );
 
+  // Realistic Maritime Fleet Filtering & Nautical Separation (COLREGs compliant safe corridors)
+  const simulationFleet = useMemo(() => {
+    if (!vessels || vessels.length === 0) return [];
+
+    const primes: Vessel[] = [];
+    const anoms: Vessel[] = [];
+    const rawNormals: Vessel[] = [];
+
+    for (const v of vessels) {
+      if (typeof v.lat !== 'number' || typeof v.lon !== 'number' || !isFinite(v.lat) || !isFinite(v.lon)) continue;
+      if (v.lat < MAP_LAT_MIN || v.lat > MAP_LAT_MAX || v.lon < MAP_LON_MIN || v.lon > MAP_LON_MAX) continue;
+
+      if (v.name === 'MTT SENARI' || v.is_prime_suspect) {
+        primes.push(v);
+      } else if (v.is_anomaly || (v as any).anomaly === -1) {
+        anoms.push(v);
+      } else {
+        rawNormals.push(v);
+      }
+    }
+
+    const haversineDistKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371.0;
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      return 2 * R * Math.asin(Math.sqrt(a));
+    };
+
+    const resultFleet: Vessel[] = [...primes];
+    const MIN_SEP_KM = 3.0; // Enforce safe international maritime distance (~1.6 NM)
+
+    for (const a of anoms) {
+      const tooClose = resultFleet.some((existing) => haversineDistKm(a.lat, a.lon, existing.lat, existing.lon) < MIN_SEP_KM);
+      if (!tooClose) {
+        resultFleet.push(a);
+      }
+      if (resultFleet.filter(v => v.is_anomaly).length >= 4) break;
+    }
+
+    const sortedNormals = [...rawNormals].sort((a, b) => (b.speed ?? 0) - (a.speed ?? 0));
+    let normalCount = 0;
+    for (const n of sortedNormals) {
+      const tooClose = resultFleet.some((existing) => haversineDistKm(n.lat, n.lon, existing.lat, existing.lon) < MIN_SEP_KM);
+      if (!tooClose) {
+        resultFleet.push(n);
+        normalCount++;
+      }
+      if (normalCount >= 18) break;
+    }
+
+    return resultFleet;
+  }, [vessels]);
+
   // Auto-fit function: Adjusts zoom and pan so full trajectory from T+0h to T+selectedTime is 100% visible
   const fitTrajectory = useCallback(() => {
     setPan({ x: 0, y: 0 });
@@ -299,31 +358,46 @@ function ForecastMap({
       ctx.fillText('SINGAPORE STRAIT TSS WESTBOUND', 100, tssNorth - 6);
       ctx.fillText('SINGAPORE STRAIT TSS EASTBOUND', 100, tssSouth + 14);
 
-      // 4. Live AIS Commercial Fleet Traffic (Moving vessels with stern wakes)
-      vessels.forEach((v, idx) => {
+      // 4. Live AIS Commercial Fleet Traffic (De-cluttered, realistic navigation separation)
+      simulationFleet.forEach((v, idx) => {
         if (typeof v.lat !== 'number' || typeof v.lon !== 'number') return;
-        const speed = typeof v.speed === 'number' && v.speed > 0 ? v.speed : 12;
-        // Real-time advance along TSS lane
-        const moveOffset = ((frame * 0.08 * speed + idx * 15) % 120) - 60;
+        const speed = typeof v.speed === 'number' && v.speed > 0 ? Math.min(v.speed, 20) : 12;
+
+        // Authentic dead-reckoning along vessel heading vector
+        const headingDeg = typeof v.heading === 'number' && v.heading >= 0 && v.heading <= 360
+          ? v.heading
+          : (v.lat > 1.25 ? 255 : 75);
+        const headingRad = (headingDeg * Math.PI) / 180;
+
+        // Steady real-time nautical advance
+        const travelDist = ((frame * 0.04 * (speed / 12) + (idx * 35)) % 320) - 160;
         const vPos = project(v.lat, v.lon, w, h);
-        const vx = vPos.x + moveOffset;
-        const vy = vPos.y;
+        const vx = vPos.x + Math.sin(headingRad) * travelDist;
+        const vy = vPos.y - Math.cos(headingRad) * travelDist;
 
         const isPrime = v.name === 'MTT SENARI' || v.is_prime_suspect;
         const isAnomaly = v.is_anomaly || (v as any).anomaly === -1;
 
-        // Hydrodynamic wake lines behind vessel
-        ctx.strokeStyle = isPrime ? 'rgba(255, 215, 0, 0.5)' : isAnomaly ? 'rgba(255, 165, 0, 0.4)' : 'rgba(0, 212, 255, 0.25)';
-        ctx.lineWidth = 1;
+        // Hydrodynamic wake lines behind vessel stern
+        const wakeLen = Math.min(12, speed * 0.7);
+        const wakeX = vx - Math.sin(headingRad) * wakeLen;
+        const wakeY = vy + Math.cos(headingRad) * wakeLen;
+
+        ctx.strokeStyle = isPrime
+          ? 'rgba(255, 215, 0, 0.6)'
+          : isAnomaly
+          ? 'rgba(255, 165, 0, 0.5)'
+          : 'rgba(91, 192, 190, 0.35)';
+        ctx.lineWidth = isPrime ? 1.5 : 1;
         ctx.beginPath();
-        ctx.moveTo(vx - 10, vy);
-        ctx.lineTo(vx - 2, vy);
+        ctx.moveTo(wakeX, wakeY);
+        ctx.lineTo(vx, vy);
         ctx.stroke();
 
-        // Vessel beacon
-        ctx.fillStyle = isPrime ? '#FFD700' : isAnomaly ? '#FFA500' : '#00D4FF';
+        // Vessel beacon (calm, uncluttered size)
+        ctx.fillStyle = isPrime ? '#FFD700' : isAnomaly ? '#FFA500' : '#5BC0BE';
         ctx.beginPath();
-        ctx.arc(vx, vy, isPrime ? 5.5 : isAnomaly ? 4 : 2.8, 0, Math.PI * 2);
+        ctx.arc(vx, vy, isPrime ? 5 : isAnomaly ? 3.8 : 2.6, 0, Math.PI * 2);
         ctx.fill();
 
         if (isPrime) {
@@ -338,8 +412,8 @@ function ForecastMap({
           ctx.stroke();
 
           ctx.fillStyle = '#FFD700';
-          ctx.font = 'bold 8px monospace';
-          ctx.fillText(`★ ${v.name}`, vx - 18, vy - 9);
+          ctx.font = 'bold 8.5px monospace';
+          ctx.fillText(`★ ${v.name}`, vx - 20, vy - 9);
         }
       });
 
@@ -786,7 +860,7 @@ export function FuturePrediction() {
                 <Badge color="cyan">T+{selectedTime}h HORIZON</Badge>
                 <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-mono text-[#5FE38A]">
                   <Radio size={11} className="animate-pulse" />
-                  <span>{vessels.length > 0 ? `${vessels.length.toLocaleString()} AIS VESSELS` : 'AIS SYNCED'}</span>
+                  <span>{vessels.length > 0 ? 'AIS SYNCED (DE-CLUTTERED)' : 'AIS SYNCED'}</span>
                 </div>
               </div>
             }
