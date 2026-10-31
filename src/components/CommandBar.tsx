@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Activity, Radio, Brain, Zap, Globe, Shield, User } from 'lucide-react';
+import { Activity, Radio, Brain, Zap, Globe, Shield, User, Sparkles, Moon, Sun } from 'lucide-react';
 import { StatusDot } from './StatusDot';
 import type { PageId } from './Sidebar';
+import { useTheme } from '@/context/ThemeContext';
 
 interface CommandBarProps {
   online: boolean;
@@ -24,6 +25,7 @@ export function CommandBar({
   onInvestigate,
   onOpenLanding,
 }: CommandBarProps) {
+  const { theme, setTheme } = useTheme();
   const [clock, setClock] = useState('');
 
   useEffect(() => {
@@ -151,6 +153,46 @@ export function CommandBar({
           <span className="font-mono text-[11px] text-[#94A3B8]">{clock}</span>
         </div>
 
+
+        {/* Interactive Theme Switcher (Default / Black / White) */}
+        <div className="flex items-center p-0.5 rounded-full bg-white/[0.04] border border-white/[0.1] text-xs">
+          <button
+            onClick={() => setTheme('default')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+              theme === 'default'
+                ? 'bg-[#5FE38A] text-[#060B10] shadow-[0_2px_8px_rgba(95,227,138,0.3)]'
+                : 'text-[#94A3B8] hover:text-white'
+            }`}
+            title="Default Oceanic Cyberpunk Theme"
+          >
+            <Sparkles size={11} />
+            <span className="hidden xl:inline">Default</span>
+          </button>
+          <button
+            onClick={() => setTheme('black')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+              theme === 'black'
+                ? 'bg-[#5FE38A] text-[#060B10] shadow-[0_2px_8px_rgba(95,227,138,0.3)]'
+                : 'text-[#94A3B8] hover:text-white'
+            }`}
+            title="Stealth OLED Black Theme"
+          >
+            <Moon size={11} />
+            <span className="hidden xl:inline">Black</span>
+          </button>
+          <button
+            onClick={() => setTheme('white')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+              theme === 'white'
+                ? 'bg-[#10B981] text-white shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
+                : 'text-[#94A3B8] hover:text-white'
+            }`}
+            title="Daylight Clean White Theme"
+          >
+            <Sun size={11} />
+            <span className="hidden xl:inline">White</span>
+          </button>
+        </div>
 
         <button onClick={onInvestigate} className="btn-sat-primary">
           <Shield size={14} />

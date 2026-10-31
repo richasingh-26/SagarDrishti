@@ -5,11 +5,11 @@ export default {
     extend: {
       colors: {
         bg: {
-          base: '#060B10',
-          deep: '#04070B',
-          card: '#0D1620',
-          cardSolid: '#0D1720',
-          panel: '#0E1A26',
+          base: 'var(--bg-space, #060B10)',
+          deep: 'var(--bg-space-deep, #04070B)',
+          card: 'var(--bg-card, #0D1620)',
+          cardSolid: 'var(--bg-card-solid, #0D1720)',
+          panel: 'var(--bg-panel, #0E1A26)',
         },
         accent: {
           DEFAULT: '#5FE38A',
