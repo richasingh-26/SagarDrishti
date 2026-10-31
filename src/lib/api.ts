@@ -87,6 +87,7 @@ export interface PrimeSuspectResponse {
   lat?: number;
   lon?: number;
   attribution_components?: Record<string, number | null>;
+  risk_level?: string;
 }
 
 export interface DetectResponse {

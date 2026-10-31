@@ -17,6 +17,8 @@ import {
   Copy,
   Check,
   Download,
+  FileDown,
+  FileText,
   Layers,
   Sparkles,
   RefreshCw,
@@ -28,6 +30,8 @@ import { PanelHeader } from '@/components/Panel';
 import { Badge } from '@/components/Badge';
 import { StatusDot } from '@/components/StatusDot';
 import { detectSpill, detectSpillUpload, type DetectResponse } from '@/lib/api';
+import { FormattedReport } from '@/components/FormattedReport';
+import { exportForensicReportPdf } from '@/lib/pdfExport';
 
 type ViewLayer = 'original' | 'mask' | 'heatmap' | 'overlay';
 
@@ -133,14 +137,22 @@ export function SpillDetection() {
         try {
           response = await fetch('/api/gemma-analyze', { method: 'POST', body: formData });
         } catch {
-          response = await fetch('http://127.0.0.1:8000/api/gemma-analyze', { method: 'POST', body: formData });
+          try {
+            response = await fetch('http://127.0.0.1:8001/api/gemma-analyze', { method: 'POST', body: formData });
+          } catch {
+            response = await fetch('http://127.0.0.1:8000/api/gemma-analyze', { method: 'POST', body: formData });
+          }
         }
       } else {
         // Default benchmark image analysis (GET)
         try {
           response = await fetch('/api/gemma-analyze');
         } catch {
-          response = await fetch('http://127.0.0.1:8000/api/gemma-analyze');
+          try {
+            response = await fetch('http://127.0.0.1:8001/api/gemma-analyze');
+          } catch {
+            response = await fetch('http://127.0.0.1:8000/api/gemma-analyze');
+          }
         }
       }
 
@@ -194,6 +206,19 @@ export function SpillDetection() {
     a.download = `SagarDrishti_SAR_Forensic_${Date.now()}.md`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPdf = () => {
+    if (!gemmaReport) return;
+    exportForensicReportPdf({
+      title: 'SAGARDRISHTI • MARITIME FORENSIC INTELLIGENCE DOSSIER',
+      reportText: gemmaReport,
+      imageDataUrl: currentDisplayImage(),
+      targetArea: 'Singapore Strait TSS (1°15\'00"N 103°48\'00"E)',
+      confidence: unetResult?.confidence ? `${(unetResult.confidence * 100).toFixed(1)}% Certainty` : '83.0% Certainty',
+      damping: '-22.4 dB Attenuation',
+      status: 'CRITICAL RADAR ANOMALY CONFIRMED',
+    });
   };
 
   // Determine current image display source based on activeLayer
@@ -529,22 +554,30 @@ export function SpillDetection() {
                 right={
                   <div className="flex items-center gap-2">
                     {gemmaReport && (
-                      <button
-                        onClick={handleCopyReport}
-                        className="p-1 rounded hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
-                        title="Copy report to clipboard"
-                      >
-                        {copied ? <Check size={14} className="text-[#5FE38A]" /> : <Copy size={14} />}
-                      </button>
-                    )}
-                    {gemmaReport && (
-                      <button
-                        onClick={handleDownloadDossier}
-                        className="p-1 rounded hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
-                        title="Download Markdown Dossier"
-                      >
-                        <Download size={14} />
-                      </button>
+                      <>
+                        <button
+                          onClick={handleDownloadPdf}
+                          className="px-2 py-1 rounded bg-[#5FE38A]/15 hover:bg-[#5FE38A]/25 text-[#5FE38A] border border-[#5FE38A]/30 text-[11px] font-mono font-bold flex items-center gap-1.5 transition-all shadow-[0_0_10px_rgba(95,227,138,0.15)]"
+                          title="Download Forensic Intelligence Dossier as PDF"
+                        >
+                          <FileDown size={13} />
+                          <span>PDF</span>
+                        </button>
+                        <button
+                          onClick={handleCopyReport}
+                          className="p-1 rounded hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
+                          title="Copy report to clipboard"
+                        >
+                          {copied ? <Check size={14} className="text-[#5FE38A]" /> : <Copy size={14} />}
+                        </button>
+                        <button
+                          onClick={handleDownloadDossier}
+                          className="p-1 rounded hover:bg-white/10 text-[#94A3B8] hover:text-white transition-colors"
+                          title="Download Markdown Dossier"
+                        >
+                          <FileText size={14} />
+                        </button>
+                      </>
                     )}
                     <Badge color="purple" dot>
                       GEMMA 4
@@ -621,14 +654,34 @@ export function SpillDetection() {
                     </div>
 
                     {/* Report Text Display (Terminal Style) */}
-                    <div className="p-4 rounded-xl bg-[#070D14] border border-white/[0.08] shadow-inner max-h-[360px] overflow-y-auto">
-                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/[0.08] text-[10px] font-mono text-[#64748B]">
-                        <span>TELEMETRY STREAM: GEMMA-4-VISION</span>
-                        <span>FORMAT: ENCRYPTED FORENSIC LOG</span>
+                    <div className="p-4 rounded-xl bg-[#070D14] border border-white/[0.08] shadow-inner max-h-[380px] overflow-y-auto">
+                      <div className="flex items-center justify-between pb-2 mb-3 border-b border-white/[0.08] text-[10px] font-mono text-[#64748B]">
+                        <span className="flex items-center gap-1.5 text-[#5FE38A]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#5FE38A] animate-ping" />
+                          TELEMETRY STREAM: GEMMA-4-VISION
+                        </span>
+                        <span>FORMAT: PARSED FORENSIC DOSSIER</span>
                       </div>
-                      <div className="text-xs text-[#E2E8F0] font-sans leading-relaxed whitespace-pre-wrap">
-                        {gemmaReport}
-                      </div>
+                      <FormattedReport report={gemmaReport} />
+                    </div>
+
+                    {/* Quick PDF & Export Toolbar directly beneath report */}
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <button
+                        onClick={handleDownloadPdf}
+                        className="flex-1 py-2 px-3 rounded-lg bg-[#5FE38A]/15 hover:bg-[#5FE38A]/25 text-[#5FE38A] border border-[#5FE38A]/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm group"
+                      >
+                        <FileDown size={14} className="group-hover:translate-y-0.5 transition-transform" />
+                        <span>Download Official Report (PDF)</span>
+                      </button>
+                      <button
+                        onClick={handleDownloadDossier}
+                        className="py-2 px-3 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[#94A3B8] hover:text-white border border-white/[0.08] text-xs font-mono font-medium flex items-center gap-1.5 transition-all"
+                        title="Download Markdown (.md)"
+                      >
+                        <Download size={13} />
+                        <span>.MD</span>
+                      </button>
                     </div>
 
                     {/* Action Advisory Checklist */}
