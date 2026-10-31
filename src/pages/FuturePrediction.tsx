@@ -104,6 +104,23 @@ interface ForecastMapProps {
   onVesselClick?: (v: Vessel) => void;
 }
 
+interface RenderedVessel {
+  vessel: Vessel;
+  vx: number;
+  vy: number;
+  headingDeg: number;
+  isPrime: boolean;
+  isAnomaly: boolean;
+}
+
+interface HoveredVesselState {
+  vessel: Vessel;
+  screenX: number;
+  screenY: number;
+  isPrime: boolean;
+  isAnomaly: boolean;
+}
+
 function ForecastMap({
   selectedTime,
   windSpeed,
@@ -126,9 +143,12 @@ function ForecastMap({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0 });
 
-  // Cursor coordinates
+  // Cursor coordinates & hover states
   const [cursorCoords, setCursorCoords] = useState<string>('01°13.5\'N  103°49.2\'E');
-  const [hoveredVessel, setHoveredVessel] = useState<Vessel | null>(null);
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredVessel, setHoveredVessel] = useState<HoveredVesselState | null>(null);
+  const hoveredVesselRef = useRef<HoveredVesselState | null>(null);
+  const renderedVesselsRef = useRef<RenderedVessel[]>([]);
 
   // Geographic projection helper (Lat/Lon to Canvas coordinate space)
   const project = useCallback(
@@ -149,7 +169,7 @@ function ForecastMap({
     []
   );
 
-  // Realistic Maritime Fleet Filtering & Nautical Separation (COLREGs compliant safe corridors)
+  // Realistic Maritime Fleet Filtering & Nautical Separation (strictly 4 to 5 vessels)
   const simulationFleet = useMemo(() => {
     if (!vessels || vessels.length === 0) return [];
 
@@ -183,18 +203,20 @@ function ForecastMap({
       return 2 * R * Math.asin(Math.sqrt(a));
     };
 
-    const resultFleet: Vessel[] = [...primes];
-    const MIN_SEP_KM = 3.0; // Enforce safe international maritime distance (~1.6 NM)
+    const finalPrimes = primes.slice(0, 1);
+    const finalAnoms = anoms.slice(0, 1);
+    const resultFleet: Vessel[] = [...finalPrimes];
+    const MIN_SEP_KM = 3.5; // Enforce safe international maritime distance (~1.9 NM)
 
-    for (const a of anoms) {
+    for (const a of finalAnoms) {
       const tooClose = resultFleet.some((existing) => haversineDistKm(a.lat, a.lon, existing.lat, existing.lon) < MIN_SEP_KM);
       if (!tooClose) {
         resultFleet.push(a);
       }
-      if (resultFleet.filter(v => v.is_anomaly).length >= 4) break;
     }
 
     const sortedNormals = [...rawNormals].sort((a, b) => (b.speed ?? 0) - (a.speed ?? 0));
+    const maxNormals = Math.max(2, 5 - resultFleet.length);
     let normalCount = 0;
     for (const n of sortedNormals) {
       const tooClose = resultFleet.some((existing) => haversineDistKm(n.lat, n.lon, existing.lat, existing.lon) < MIN_SEP_KM);
@@ -202,7 +224,7 @@ function ForecastMap({
         resultFleet.push(n);
         normalCount++;
       }
-      if (normalCount >= 18) break;
+      if (normalCount >= maxNormals) break;
     }
 
     return resultFleet;
@@ -359,6 +381,8 @@ function ForecastMap({
       ctx.fillText('SINGAPORE STRAIT TSS EASTBOUND', 100, tssSouth + 14);
 
       // 4. Live AIS Commercial Fleet Traffic (De-cluttered, realistic navigation separation)
+      const currentRenderedList: RenderedVessel[] = [];
+
       simulationFleet.forEach((v, idx) => {
         if (typeof v.lat !== 'number' || typeof v.lon !== 'number') return;
         const speed = typeof v.speed === 'number' && v.speed > 0 ? Math.min(v.speed, 20) : 12;
@@ -378,44 +402,103 @@ function ForecastMap({
         const isPrime = v.name === 'MTT SENARI' || v.is_prime_suspect;
         const isAnomaly = v.is_anomaly || (v as any).anomaly === -1;
 
-        // Hydrodynamic wake lines behind vessel stern
-        const wakeLen = Math.min(12, speed * 0.7);
+        currentRenderedList.push({
+          vessel: v,
+          vx,
+          vy,
+          headingDeg,
+          isPrime,
+          isAnomaly,
+        });
+
+        // 1. Hydrodynamic wake lines behind vessel stern
+        const wakeLen = Math.min(14, speed * 0.8);
         const wakeX = vx - Math.sin(headingRad) * wakeLen;
         const wakeY = vy + Math.cos(headingRad) * wakeLen;
 
         ctx.strokeStyle = isPrime
-          ? 'rgba(255, 215, 0, 0.6)'
+          ? 'rgba(255, 215, 0, 0.7)'
           : isAnomaly
-          ? 'rgba(255, 165, 0, 0.5)'
-          : 'rgba(91, 192, 190, 0.35)';
-        ctx.lineWidth = isPrime ? 1.5 : 1;
+          ? 'rgba(255, 165, 0, 0.6)'
+          : 'rgba(0, 212, 255, 0.45)';
+        ctx.lineWidth = isPrime ? 1.8 : 1.2;
         ctx.beginPath();
         ctx.moveTo(wakeX, wakeY);
         ctx.lineTo(vx, vy);
         ctx.stroke();
 
-        // Vessel beacon (calm, uncluttered size)
-        ctx.fillStyle = isPrime ? '#FFD700' : isAnomaly ? '#FFA500' : '#5BC0BE';
-        ctx.beginPath();
-        ctx.arc(vx, vy, isPrime ? 5 : isAnomaly ? 3.8 : 2.6, 0, Math.PI * 2);
-        ctx.fill();
-
+        // 2. Animated Radar Halos for Prime and Anomaly
         if (isPrime) {
-          ctx.strokeStyle = '#FFFFFF';
+          const pulseR = 11 + Math.sin(frame * 0.1) * 4;
+          ctx.strokeStyle = 'rgba(255, 215, 0, 0.65)';
           ctx.lineWidth = 1.2;
-          ctx.stroke();
-          // Radar pulse
-          const pulseR = 8 + Math.sin(frame * 0.1) * 4;
-          ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
           ctx.beginPath();
           ctx.arc(vx, vy, pulseR, 0, Math.PI * 2);
           ctx.stroke();
-
-          ctx.fillStyle = '#FFD700';
-          ctx.font = 'bold 8.5px monospace';
-          ctx.fillText(`★ ${v.name}`, vx - 20, vy - 9);
+        } else if (isAnomaly) {
+          const pulseR = 9 + Math.sin(frame * 0.12) * 3;
+          ctx.strokeStyle = 'rgba(255, 165, 0, 0.55)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(vx, vy, pulseR, 0, Math.PI * 2);
+          ctx.stroke();
         }
+
+        // 3. Directional Maritime Vessel Arrow / Chevron Icon (pointing along heading)
+        ctx.save();
+        ctx.translate(vx, vy);
+        ctx.rotate(headingRad);
+
+        const shipLen = isPrime ? 17 : isAnomaly ? 14 : 12;
+        const shipWidth = isPrime ? 10 : isAnomaly ? 8 : 7;
+
+        ctx.beginPath();
+        ctx.moveTo(0, -shipLen / 2); // Bow / Front arrow tip
+        ctx.lineTo(shipWidth / 2, shipLen / 2); // Starboard stern corner
+        ctx.lineTo(0, shipLen / 2 - 2.5); // Notch / Inset stern
+        ctx.lineTo(-shipWidth / 2, shipLen / 2); // Port stern corner
+        ctx.closePath();
+
+        ctx.fillStyle = isPrime ? '#FFD700' : isAnomaly ? '#FFA500' : '#00D4FF';
+        ctx.fill();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = isPrime ? 1.5 : 1.0;
+        ctx.stroke();
+
+        ctx.restore();
+
+        // 4. Highlight Ring when Hovered
+        if (hoveredVesselRef.current && hoveredVesselRef.current.vessel.name === v.name) {
+          const lockPulse = Math.sin(frame * 0.2) * 3;
+          ctx.strokeStyle = isPrime ? '#FFD700' : isAnomaly ? '#FFA500' : '#00D4FF';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.arc(vx, vy, 16 + lockPulse, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // 5. Vessel Name Label (clearly visible for ALL vessels)
+        const labelText = isPrime ? `★ ${v.name}` : isAnomaly ? `⚠ ${v.name}` : v.name;
+        const labelColor = isPrime ? '#FFD700' : isAnomaly ? '#FFA500' : '#00D4FF';
+        
+        ctx.font = isPrime ? 'bold 9px monospace' : 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        const labelWidth = ctx.measureText(labelText).width;
+        
+        // Dark pill background for crisp contrast against ocean and currents
+        ctx.fillStyle = 'rgba(6, 16, 30, 0.85)';
+        ctx.fillRect(vx - labelWidth / 2 - 3, vy - 20, labelWidth + 6, 12);
+        ctx.strokeStyle = labelColor;
+        ctx.lineWidth = 0.6;
+        ctx.strokeRect(vx - labelWidth / 2 - 3, vy - 20, labelWidth + 6, 12);
+
+        ctx.fillStyle = labelColor;
+        ctx.fillText(labelText, vx, vy - 11);
       });
+
+      renderedVesselsRef.current = currentRenderedList;
 
       // 5. Projected Oil Spill Trajectory & Waypoint Milestones
       const originPos = project(ORIGIN_LAT, ORIGIN_LON, w, h);
@@ -659,6 +742,28 @@ function ForecastMap({
     const transformedY = (mouseY - (h / 2 + pan.y)) / zoom + h / 2;
     const { lat, lon } = unproject(transformedX, transformedY, w, h);
     setCursorCoords(formatCoordinates(lat, lon));
+    setCursorPos({ x: mouseX, y: mouseY });
+
+    // Check hit test against rendered vessels (radius ~26px)
+    const HIT_RADIUS = 26;
+    let hit: HoveredVesselState | null = null;
+    for (const rv of renderedVesselsRef.current) {
+      const screenVx = (rv.vx - w / 2) * zoom + w / 2 + pan.x;
+      const screenVy = (rv.vy - h / 2) * zoom + h / 2 + pan.y;
+      const dist = Math.hypot(mouseX - screenVx, mouseY - screenVy);
+      if (dist <= HIT_RADIUS) {
+        hit = {
+          vessel: rv.vessel,
+          screenX: screenVx,
+          screenY: screenVy,
+          isPrime: rv.isPrime,
+          isAnomaly: rv.isAnomaly,
+        };
+        break;
+      }
+    }
+    setHoveredVessel(hit);
+    hoveredVesselRef.current = hit;
 
     if (isDragging) {
       const dx = e.clientX - dragStartRef.current.x;
@@ -683,13 +788,23 @@ function ForecastMap({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full min-h-[460px] overflow-hidden rounded-xl border border-white/[0.12] ${
-        isDragging ? 'cursor-grabbing' : 'cursor-crosshair'
+      className={`relative w-full h-full min-h-[460px] overflow-hidden rounded-xl border border-white/[0.12] select-none ${
+        isDragging ? 'cursor-grabbing' : hoveredVessel ? 'cursor-pointer' : 'cursor-crosshair'
       }`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={() => setIsDragging(false)}
+      onMouseLeave={() => {
+        setIsDragging(false);
+        setHoveredVessel(null);
+        hoveredVesselRef.current = null;
+        setCursorPos(null);
+      }}
+      onClick={() => {
+        if (hoveredVessel) {
+          onVesselClick?.(hoveredVessel.vessel);
+        }
+      }}
       onWheel={handleWheel}
     >
       <canvas ref={canvasRef} className="w-full h-full block" />
@@ -763,6 +878,118 @@ function ForecastMap({
       <div className="absolute bottom-3 right-3 z-20 glass-panel px-3 py-1.5 rounded-xl border border-white/[0.1] pointer-events-none text-[10px] font-mono text-muted">
         <span>TSS Corridor · Singapore Strait</span>
       </div>
+
+      {/* Interactive Vessel Telemetry Popup Card (on Ship Arrow/Icon Hover) */}
+      {hoveredVessel && (
+        <div
+          className="absolute pointer-events-none glass-panel px-3.5 py-2.5 text-xs z-30 shadow-2xl border border-white/[0.25] rounded-xl backdrop-blur-2xl transition-all"
+          style={{
+            left: Math.min(
+              Math.max(hoveredVessel.screenX + 16, 12),
+              (containerRef.current?.clientWidth ?? 400) - 230
+            ),
+            top: Math.max(hoveredVessel.screenY - 75, 12),
+          }}
+        >
+          <div className="font-bold text-white flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{
+                  backgroundColor: hoveredVessel.isPrime
+                    ? '#FFD700'
+                    : hoveredVessel.isAnomaly
+                    ? '#FFA500'
+                    : '#00D4FF',
+                }}
+              />
+              <span className="font-mono text-sm tracking-wide">{hoveredVessel.vessel.name}</span>
+            </div>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/90">
+              {hoveredVessel.vessel.type || 'Cargo/Tanker'}
+            </span>
+          </div>
+
+          <div className="text-muted text-[11px] font-mono mt-1 flex items-center gap-3">
+            <span>MMSI: {hoveredVessel.vessel.mmsi}</span>
+            <span>SPEED: {hoveredVessel.vessel.speed || 12} kn</span>
+            <span>HDG: {hoveredVessel.vessel.heading || 248}°</span>
+          </div>
+
+          <div className="text-[10px] font-mono text-[#CBD5E1] mt-1">
+            POS: {formatCoordinates(hoveredVessel.vessel.lat, hoveredVessel.vessel.lon)}
+          </div>
+
+          <div
+            className="text-[10px] font-bold font-mono mt-1.5 pt-1 border-t border-white/10 uppercase tracking-wider flex items-center gap-1"
+            style={{
+              color: hoveredVessel.isPrime
+                ? '#FFD700'
+                : hoveredVessel.isAnomaly
+                ? '#FFA500'
+                : '#00D4FF',
+            }}
+          >
+            {hoveredVessel.isPrime
+              ? '★ PRIME SUSPECT ATTRIBUTED'
+              : hoveredVessel.isAnomaly
+              ? '⚠ KINEMATIC ANOMALY FLAGGED'
+              : '✔ NORMAL TSS TRANSIT FLEET'}
+          </div>
+        </div>
+      )}
+
+      {/* Tactical Radar Reticle Cursor Effect */}
+      {cursorPos && !isDragging && (
+        <div
+          className="absolute pointer-events-none z-30 transition-transform duration-75 ease-out"
+          style={{
+            left: cursorPos.x,
+            top: cursorPos.y,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <div
+            className={`relative flex items-center justify-center transition-all duration-150 ${
+              hoveredVessel ? 'w-10 h-10' : 'w-7 h-7'
+            }`}
+          >
+            {/* Outer Reticle Ring */}
+            <div
+              className={`absolute inset-0 rounded-full border transition-all duration-200 ${
+                hoveredVessel
+                  ? hoveredVessel.isPrime
+                    ? 'border-[#FFD700] shadow-[0_0_12px_rgba(255,215,0,0.7)] scale-110'
+                    : hoveredVessel.isAnomaly
+                    ? 'border-[#FFA500] shadow-[0_0_12px_rgba(255,165,0,0.7)] scale-110'
+                    : 'border-[#00D4FF] shadow-[0_0_12px_rgba(0,212,255,0.7)] scale-110'
+                  : 'border-white/30 border-dashed animate-spin-slow'
+              }`}
+            />
+            {/* Precision Crosshair Center */}
+            <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_#ffffff]" />
+            <div className="absolute w-3.5 h-px bg-white/70" />
+            <div className="absolute h-3.5 w-px bg-white/70" />
+
+            {/* Target Lock Readout Tag */}
+            {hoveredVessel && (
+              <div className="absolute left-8 -top-1 whitespace-nowrap bg-[#06101E]/95 border border-white/20 px-2 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider text-white shadow-xl flex items-center gap-1.5 backdrop-blur-md">
+                <span
+                  className="w-1.5 h-1.5 rounded-full animate-ping"
+                  style={{
+                    backgroundColor: hoveredVessel.isPrime
+                      ? '#FFD700'
+                      : hoveredVessel.isAnomaly
+                      ? '#FFA500'
+                      : '#00D4FF',
+                  }}
+                />
+                <span>TARGET LOCK: {hoveredVessel.vessel.name}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

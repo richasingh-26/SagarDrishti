@@ -39,6 +39,7 @@ function generateWavePath(baseY: number, amplitude: number, frequency: number, p
 export function TacticalSeaView({ vessels: propVessels, primeSuspectName, selectedMmsi, onVesselClick }: TacticalSeaViewProps) {
   const [fetchedVessels, setFetchedVessels] = useState<Vessel[]>([]);
   const [hovered, setHovered] = useState<HoverState | null>(null);
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   
   // Real-time animation time state
   const [animTime, setAnimTime] = useState(0);
@@ -154,14 +155,26 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
     // Sort normals by activity/speed to pick real active ships
     const sortedNormals = [...rawNormals].sort((a, b) => (b.speed ?? 0) - (a.speed ?? 0));
 
-    // Spatial de-cluttering: enforce realistic ~1.8 km separation in TSS
-    // This prevents hundreds of vessels clumping together as an unrealistic blob
+    // Strictly limit dashboard simulation to 4 to 5 vessels total
+    const finalPrimes = primes.slice(0, 1);
+    const finalAnoms = anoms.slice(0, 1);
+    const maxNormals = Math.max(2, 5 - finalPrimes.length - finalAnoms.length);
+
     const declutteredNormals: Vessel[] = [];
-    const MIN_SEP_KM = 2.8;
+    const MIN_SEP_KM = 3.5;
+
+    // If selectedMmsi is specified, prioritize it so user-clicked vessel from top-10 is visible
+    if (selectedMmsi) {
+      const selected = sortedNormals.find((v) => v.mmsi === selectedMmsi || v.name === selectedMmsi);
+      if (selected) {
+        declutteredNormals.push(selected);
+      }
+    }
 
     for (const v of sortedNormals) {
-      const nearPrime = primes.some((p) => haversineDistKm(v.lat, v.lon, p.lat, p.lon) < 1.4);
-      const nearAnom = anoms.some((a) => haversineDistKm(v.lat, v.lon, a.lat, a.lon) < 1.4);
+      if (declutteredNormals.some((d) => d.mmsi === v.mmsi || d.name === v.name)) continue;
+      const nearPrime = finalPrimes.some((p) => haversineDistKm(v.lat, v.lon, p.lat, p.lon) < 2.0);
+      const nearAnom = finalAnoms.some((a) => haversineDistKm(v.lat, v.lon, a.lat, a.lon) < 2.0);
       const nearNormal = declutteredNormals.some(
         (n) => haversineDistKm(v.lat, v.lon, n.lat, n.lon) < MIN_SEP_KM
       );
@@ -169,11 +182,11 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
       if (!nearPrime && !nearAnom && !nearNormal) {
         declutteredNormals.push(v);
       }
-      if (declutteredNormals.length >= 18) break;
+      if (declutteredNormals.length >= maxNormals) break;
     }
 
-    return { primeList: primes, anomList: anoms, normalList: declutteredNormals };
-  }, [vessels, isPrime, isAnomaly]);
+    return { primeList: finalPrimes, anomList: finalAnoms, normalList: declutteredNormals };
+  }, [vessels, isPrime, isAnomaly, selectedMmsi]);
 
   // Spill center ~55% x, 50% y with gentle hydrodynamic drift
   const spillBaseCx = WIDTH * 0.55;
@@ -247,6 +260,14 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setCursorPos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+
     if (!isDragging) return;
     const dx = (e.clientX - dragStartRef.current.x) / zoom;
     const dy = (e.clientY - dragStartRef.current.y) / zoom;
@@ -276,18 +297,21 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
   const handleVesselHover = (v: Vessel, e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
     setHovered({
       vessel: v,
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: sx,
+      y: sy,
     });
+    setCursorPos({ x: sx, y: sy });
   };
 
   return (
     <div
       ref={containerRef}
       className={`relative w-full h-full overflow-hidden rounded-2xl select-none ${
-        isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        isDragging ? 'cursor-grabbing' : 'cursor-crosshair'
       }`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -295,6 +319,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
       onMouseLeave={() => {
         setIsDragging(false);
         setHovered(null);
+        setCursorPos(null);
       }}
       onWheel={handleWheel}
     >
@@ -538,16 +563,23 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
           if (x < -20 || x > WIDTH + 20 || y < -20 || y > HEIGHT + 20) return null;
 
           return (
-            <g key={`norm-${v.mmsi || v.name}`} className="cursor-pointer">
+            <g
+              key={`norm-${v.mmsi || v.name}`}
+              className="cursor-pointer group"
+              onMouseEnter={(e) => handleVesselHover(v, e)}
+              onMouseMove={(e) => handleVesselHover(v, e)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => onVesselClick?.(v)}
+            >
               {/* Hydrodynamic stern wake trail */}
               <line
-                x1={x - 7}
+                x1={x - 8}
                 y1={y}
                 x2={x - 2}
                 y2={y}
-                stroke="#5BC0BE"
-                strokeWidth="1"
-                strokeOpacity="0.4"
+                stroke="#00D4FF"
+                strokeWidth="1.2"
+                strokeOpacity="0.5"
                 strokeDasharray="3 2"
               />
               {/* Selected highlight ring if chosen from suspect table */}
@@ -555,25 +587,36 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
                 <circle
                   cx={x}
                   cy={y}
-                  r={10}
+                  r={11}
                   fill="none"
-                  stroke="#5BC0BE"
-                  strokeWidth="1.5"
+                  stroke="#00D4FF"
+                  strokeWidth="1.8"
                   className="animate-ping"
                 />
               )}
               <circle
                 cx={x}
                 cy={y}
-                r={isSelected ? 4.8 : 3.6}
-                fill={isSelected ? '#FFFFFF' : '#5BC0BE'}
+                r={isSelected ? 5.2 : 4}
+                fill={isSelected ? '#FFFFFF' : '#00D4FF'}
                 stroke="#ffffff"
-                strokeWidth={isSelected ? 1.5 : 0.8}
-                opacity={isSelected ? 1 : 0.85}
-                className="hover:opacity-100 hover:scale-125 transition-all"
-                onMouseEnter={(e) => handleVesselHover(v, e)}
-                onClick={() => onVesselClick?.(v)}
+                strokeWidth={isSelected ? 1.6 : 1}
+                opacity={isSelected ? 1 : 0.9}
+                className="hover:scale-125 transition-transform"
               />
+              {/* Clear vessel name label */}
+              <text
+                x={x}
+                y={y - 9}
+                fill="#00D4FF"
+                fontSize="8"
+                fontFamily="monospace"
+                textAnchor="middle"
+                fontWeight="700"
+                className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] pointer-events-none select-none"
+              >
+                {v.name}
+              </text>
             </g>
           );
         })}
@@ -594,6 +637,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
               className="cursor-pointer"
               onMouseEnter={(e) => handleVesselHover(v, e)}
               onMouseMove={(e) => handleVesselHover(v, e)}
+              onMouseLeave={() => setHovered(null)}
               onClick={() => onVesselClick?.(v)}
             >
               {/* Wake line */}
@@ -608,6 +652,19 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
               />
               <circle cx={x} cy={y} r={pulseR} fill="#FFA500" opacity={pulseO} />
               <circle cx={x} cy={y} r={6.5} fill="#FFA500" stroke="#ffffff" strokeWidth="1.5" />
+              {/* Clear vessel name label */}
+              <text
+                x={x}
+                y={y - 12}
+                fill="#FFA500"
+                fontSize="8.5"
+                fontFamily="monospace"
+                textAnchor="middle"
+                fontWeight="700"
+                className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] pointer-events-none select-none"
+              >
+                ⚠ {v.name}
+              </text>
             </g>
           );
         })}
@@ -631,6 +688,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
               className="cursor-pointer"
               onMouseEnter={(e) => handleVesselHover(v, e)}
               onMouseMove={(e) => handleVesselHover(v, e)}
+              onMouseLeave={() => setHovered(null)}
               onClick={() => onVesselClick?.(v)}
             >
               {/* Stern wake disturbance */}
@@ -778,6 +836,58 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, select
               : isAnomaly(hovered.vessel)
               ? '⚠ KINEMATIC ANOMALY FLAGGED'
               : '✔ NORMAL TRANSIT FLEET'}
+          </div>
+        </div>
+      )}
+
+      {/* Tactical Radar Reticle Cursor Effect */}
+      {cursorPos && !isDragging && (
+        <div
+          className="absolute pointer-events-none z-30 transition-transform duration-75 ease-out"
+          style={{
+            left: cursorPos.x,
+            top: cursorPos.y,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <div
+            className={`relative flex items-center justify-center transition-all duration-150 ${
+              hovered ? 'w-10 h-10' : 'w-7 h-7'
+            }`}
+          >
+            {/* Outer Reticle Ring */}
+            <div
+              className={`absolute inset-0 rounded-full border transition-all duration-200 ${
+                hovered
+                  ? isPrime(hovered.vessel)
+                    ? 'border-[#FFD700] shadow-[0_0_12px_rgba(255,215,0,0.7)] scale-110'
+                    : isAnomaly(hovered.vessel)
+                    ? 'border-[#FFA500] shadow-[0_0_12px_rgba(255,165,0,0.7)] scale-110'
+                    : 'border-[#00D4FF] shadow-[0_0_12px_rgba(0,212,255,0.7)] scale-110'
+                  : 'border-white/30 border-dashed animate-spin-slow'
+              }`}
+            />
+            {/* Precision Crosshair Center */}
+            <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_#ffffff]" />
+            <div className="absolute w-3.5 h-px bg-white/70" />
+            <div className="absolute h-3.5 w-px bg-white/70" />
+
+            {/* Target Lock Readout Tag */}
+            {hovered && (
+              <div className="absolute left-8 -top-1 whitespace-nowrap bg-[#06101E]/95 border border-white/20 px-2 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider text-white shadow-xl flex items-center gap-1.5 backdrop-blur-md">
+                <span
+                  className="w-1.5 h-1.5 rounded-full animate-ping"
+                  style={{
+                    backgroundColor: isPrime(hovered.vessel)
+                      ? '#FFD700'
+                      : isAnomaly(hovered.vessel)
+                      ? '#FFA500'
+                      : '#00D4FF',
+                  }}
+                />
+                <span>LOCK: {hovered.vessel.name}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
