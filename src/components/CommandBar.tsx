@@ -93,7 +93,7 @@ export function CommandBar({
         </button>
 
         {/* SatQuery Capsule Nav Links */}
-        <nav className="hidden lg:flex items-center gap-1.5 pl-2">
+        <nav className="hidden 2xl:flex items-center gap-1.5 pl-2">
           {navTabs.map((tab) => {
             const isActive = activePage === tab.id;
             return (
@@ -147,18 +147,17 @@ export function CommandBar({
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-3 shrink-0">
-        <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto">
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
           <Activity size={11} className="text-[#5FE38A]" />
           <span className="font-mono text-[11px] text-[#94A3B8]">{clock}</span>
         </div>
 
-
         {/* Interactive Theme Switcher (Default / Black / White) */}
-        <div className="flex items-center p-0.5 rounded-full bg-white/[0.04] border border-white/[0.1] text-xs">
+        <div className="flex items-center p-0.5 rounded-full bg-white/[0.05] border border-white/[0.12] shrink-0">
           <button
             onClick={() => setTheme('default')}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer ${
               theme === 'default'
                 ? 'bg-[#5FE38A] text-[#060B10] shadow-[0_2px_8px_rgba(95,227,138,0.3)]'
                 : 'text-[#94A3B8] hover:text-white'
@@ -166,23 +165,23 @@ export function CommandBar({
             title="Default Oceanic Cyberpunk Theme"
           >
             <Sparkles size={11} />
-            <span className="hidden xl:inline">Default</span>
+            <span className="text-[10px] font-mono">DEF</span>
           </button>
           <button
             onClick={() => setTheme('black')}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer ${
               theme === 'black'
                 ? 'bg-[#5FE38A] text-[#060B10] shadow-[0_2px_8px_rgba(95,227,138,0.3)]'
                 : 'text-[#94A3B8] hover:text-white'
             }`}
-            title="Stealth OLED Black Theme"
+            title="Stealth OLED Pitch Black Theme"
           >
             <Moon size={11} />
-            <span className="hidden xl:inline">Black</span>
+            <span className="text-[10px] font-mono">BLK</span>
           </button>
           <button
             onClick={() => setTheme('white')}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer ${
               theme === 'white'
                 ? 'bg-[#10B981] text-white shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
                 : 'text-[#94A3B8] hover:text-white'
@@ -190,21 +189,21 @@ export function CommandBar({
             title="Daylight Clean White Theme"
           >
             <Sun size={11} />
-            <span className="hidden xl:inline">White</span>
+            <span className="text-[10px] font-mono">WHT</span>
           </button>
         </div>
 
-        <button onClick={onInvestigate} className="btn-sat-primary">
-          <Shield size={14} />
-          <span>Full Forensic Pass</span>
+        <button onClick={onInvestigate} className="btn-sat-primary whitespace-nowrap text-xs px-3 py-1.5">
+          <Shield size={13} />
+          <span className="hidden sm:inline">Forensic Pass</span>
         </button>
 
         {/* SatQuery User Profile Circle */}
         <button
-          className="w-9 h-9 rounded-full bg-white/[0.04] hover:bg-[#5FE38A]/10 border border-white/[0.15] hover:border-[#5FE38A] text-[#CBD5E1] hover:text-[#5FE38A] flex items-center justify-center transition-all cursor-pointer"
+          className="w-8 h-8 rounded-full bg-white/[0.04] hover:bg-[#5FE38A]/10 border border-white/[0.15] hover:border-[#5FE38A] text-[#CBD5E1] hover:text-[#5FE38A] flex items-center justify-center transition-all cursor-pointer shrink-0"
           title="Security Clearance: Level 4"
         >
-          <User size={16} />
+          <User size={15} />
         </button>
       </div>
     </header>

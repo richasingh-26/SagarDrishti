@@ -6,8 +6,13 @@ import {
   TrendingUp,
   SlidersHorizontal,
   Compass,
+  Sparkles,
+  Moon,
+  Sun,
+  Palette,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 
 export type PageId =
   | 'dashboard'
@@ -35,6 +40,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
+  const { theme, setTheme } = useTheme();
   const items: NavItem[] = [
     { id: 'dashboard', label: 'Command Center', icon: LayoutDashboard },
     { id: 'vessels', label: 'AIS Fleet Track', icon: Ship, badge: anomalyCount },
@@ -83,6 +89,52 @@ export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
             </button>
           );
         })}
+      </div>
+
+      {/* Theme Switcher */}
+      <div className="mx-3 mb-2 p-2 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-1.5">
+        <div className="flex items-center justify-between text-[10px] px-1">
+          <span className="section-label">SYSTEM THEME</span>
+          <Palette size={11} className="text-[#5FE38A]" />
+        </div>
+        <div className="grid grid-cols-3 gap-1 p-0.5 rounded-lg bg-black/20 border border-white/[0.06]">
+          <button
+            onClick={() => setTheme('default')}
+            className={`py-1 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+              theme === 'default'
+                ? 'bg-[#5FE38A] text-[#060B10] shadow-sm'
+                : 'text-[#94A3B8] hover:text-white'
+            }`}
+            title="Default Oceanic Cyberpunk"
+          >
+            <Sparkles size={10} />
+            <span>Def</span>
+          </button>
+          <button
+            onClick={() => setTheme('black')}
+            className={`py-1 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+              theme === 'black'
+                ? 'bg-[#5FE38A] text-[#060B10] shadow-sm'
+                : 'text-[#94A3B8] hover:text-white'
+            }`}
+            title="Pitch Black OLED"
+          >
+            <Moon size={10} />
+            <span>Blk</span>
+          </button>
+          <button
+            onClick={() => setTheme('white')}
+            className={`py-1 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+              theme === 'white'
+                ? 'bg-[#10B981] text-white shadow-sm'
+                : 'text-[#94A3B8] hover:text-white'
+            }`}
+            title="Daylight White"
+          >
+            <Sun size={10} />
+            <span>Wht</span>
+          </button>
+        </div>
       </div>
 
       {/* Case Footer Card (SatQuery Info Card style) */}
