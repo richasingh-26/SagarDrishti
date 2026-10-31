@@ -36,14 +36,6 @@ export function CommandBar({
     return () => clearInterval(id);
   }, []);
 
-  const navTabs: { id: PageId; label: string }[] = [
-    { id: 'dashboard', label: 'Command Center' },
-    { id: 'vessels', label: 'AIS Fleet Track' },
-    { id: 'spill-detection', label: 'SAR AI Analysis' },
-    { id: 'fleet-builder', label: 'Custom Studio' },
-    { id: 'scenario-builder', label: 'Drift Simulator' },
-    { id: 'prediction', label: 'Forecast' },
-  ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[#060B10]/80 backdrop-blur-xl border-b border-white/[0.08] flex items-center justify-between px-6 gap-4">
@@ -90,27 +82,11 @@ export function CommandBar({
           </div>
         </button>
 
-        {/* SatQuery Capsule Nav Links */}
-        <nav className="hidden lg:flex items-center gap-1.5 pl-2">
-          {navTabs.map((tab) => {
-            const isActive = activePage === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onNavigate(tab.id)}
-                className={`text-[12.5px] px-3.5 py-1.5 transition-all ${
-                  isActive ? 'nav-item-active' : 'nav-item'
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+
       </div>
 
       {/* Center: SatQuery Status Dot Ribbon */}
-      <div className="hidden xl:flex items-center gap-4 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08]">
+      <div className="hidden md:flex items-center gap-4 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08]">
         <div className="flex items-center gap-2 text-xs">
           <StatusDot color={sarAvailable ? '#5FE38A' : '#F59E0B'} size={7} />
           <span className="text-[11px] text-[#94A3B8]">Sentinel-1</span>
