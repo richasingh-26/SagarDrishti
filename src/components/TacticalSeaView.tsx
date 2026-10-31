@@ -46,7 +46,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, onVess
   const [zoom, setZoom] = useState(1.0);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [autoDrift, setAutoDrift] = useState(true);
-  const [showLegend, setShowLegend] = useState(true);
+  const [showLegend, setShowLegend] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0 });
 
@@ -656,11 +656,7 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, onVess
         </button>
       </div>
 
-            {/* Non-Technical Map Guide / Interactive Legend */}
-      <div className="absolute top-4 left-44 z-20 hidden md:flex items-center gap-2 glass-panel px-3 py-1.5 border border-white/[0.1] rounded-xl text-[11px] text-[#94A3B8] pointer-events-none">
-        <span className="text-[#5FE38A] font-bold">💡 TIP:</span>
-        <span>Drag map to pan • Scroll to zoom • Click ships to inspect</span>
-      </div>
+
 
       {/* Floating Tactical Legend (Bottom-Left) */}
       <div className="absolute bottom-4 left-4 z-20 glass-panel p-2.5 rounded-xl border border-white/[0.12] shadow-xl backdrop-blur-xl max-w-xs transition-all">
