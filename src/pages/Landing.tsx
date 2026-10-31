@@ -89,12 +89,12 @@ export function Landing({ onEnter }: LandingProps) {
       icon: SlidersHorizontal,
     },
     {
-      id: 'scenario-builder',
+      id: 'prediction',
       title: 'Drift Simulator',
-      desc: 'Copernicus Lagrangian reverse trajectory backtracking',
-      page: 'scenario-builder',
+      desc: 'Copernicus Lagrangian trajectory forecasting & dispersion',
+      page: 'prediction',
       img: '/visuals/cards/social-track.jpg',
-      icon: FlaskConical,
+      icon: TrendingUp,
     },
   ];
 

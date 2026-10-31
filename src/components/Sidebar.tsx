@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   ScanEye,
   Ship,
-  FlaskConical,
   TrendingUp,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -39,7 +38,6 @@ export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
     { id: 'fleet-builder', label: 'Custom Ship ...', icon: SlidersHorizontal, isNew: true },
     { id: 'vessels', label: 'Vessel Intellige...', icon: Ship, badge: anomalyCount },
     { id: 'spill-detection', label: 'Spill Detection (SAR)', icon: ScanEye },
-    { id: 'scenario-builder', label: 'Scenario Builder', icon: FlaskConical },
     { id: 'prediction', label: 'Future Prediction', icon: TrendingUp },
   ];
 

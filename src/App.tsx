@@ -3,7 +3,6 @@ import { CommandBar } from '@/components/CommandBar';
 import { Sidebar, type PageId } from '@/components/Sidebar';
 import { Dashboard } from '@/pages/Dashboard';
 import { VesselIntelligence } from '@/pages/VesselIntelligence';
-import { ScenarioBuilder } from '@/pages/ScenarioBuilder';
 import { Evidence } from '@/pages/Evidence';
 import { FuturePrediction } from '@/pages/FuturePrediction';
 import { SpillDetection } from '@/pages/SpillDetection';
@@ -108,7 +107,6 @@ function App() {
                 onRefresh={refresh}
               />
             )}
-            {page === 'scenario-builder' && <ScenarioBuilder />}
             {page === 'evidence' && <Evidence />}
             {page === 'prediction' && <FuturePrediction />}
           </div>
