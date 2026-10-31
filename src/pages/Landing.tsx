@@ -1,321 +1,745 @@
-import { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Stars } from '@react-three/drei';
-import * as THREE from 'three';
-import { Anchor, Waves, ChevronRight, Shield, Satellite, Radio } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import {
+  Search,
+  ArrowRight,
+  Shield,
+  Radio,
+  ScanEye,
+  SlidersHorizontal,
+  FlaskConical,
+  Compass,
+  Waves,
+  Ship,
+  Wind,
+  Thermometer,
+  Layers,
+  Crosshair,
+  ArrowUpRight,
+  Radar,
+  Anchor,
+  Activity,
+  AlertTriangle,
+} from 'lucide-react';
 
-/* ------------------------------------------------------------------ */
-/*  Animated Earth Sphere with procedural ocean/land shader            */
-/* ------------------------------------------------------------------ */
-function Earth() {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const atmosphereRef = useRef<THREE.Mesh>(null);
-
-  const earthMaterial = useMemo(() => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-      },
-      vertexShader: `
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        varying vec2 vUv;
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform float uTime;
-        varying vec3 vNormal;
-        varying vec3 vPosition;
-        varying vec2 vUv;
-
-        // Simple hash-based noise
-        float hash(vec2 p) {
-          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-        }
-
-        float noise(vec2 p) {
-          vec2 i = floor(p);
-          vec2 f = fract(p);
-          f = f * f * (3.0 - 2.0 * f);
-          float a = hash(i);
-          float b = hash(i + vec2(1.0, 0.0));
-          float c = hash(i + vec2(0.0, 1.0));
-          float d = hash(i + vec2(1.0, 1.0));
-          return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-        }
-
-        float fbm(vec2 p) {
-          float v = 0.0;
-          float a = 0.5;
-          for (int i = 0; i < 6; i++) {
-            v += a * noise(p);
-            p *= 2.0;
-            a *= 0.5;
-          }
-          return v;
-        }
-
-        void main() {
-          vec2 uv = vUv;
-          
-          // Create continent-like landmasses using noise
-          float continent = fbm(uv * 4.0 + vec2(0.5, 0.2));
-          continent += 0.3 * fbm(uv * 8.0 + vec2(1.5, 3.2));
-          
-          // Ocean color (deep navy to teal)
-          vec3 oceanDeep = vec3(0.01, 0.04, 0.12);
-          vec3 oceanShallow = vec3(0.0, 0.15, 0.25);
-          vec3 ocean = mix(oceanDeep, oceanShallow, fbm(uv * 12.0 + uTime * 0.02));
-          
-          // Land color (dark greens/browns)
-          vec3 landLow = vec3(0.04, 0.12, 0.03);
-          vec3 landHigh = vec3(0.08, 0.06, 0.04);
-          vec3 land = mix(landLow, landHigh, fbm(uv * 16.0));
-          
-          // Determine land vs ocean
-          float landMask = smoothstep(0.48, 0.55, continent);
-          vec3 surface = mix(ocean, land, landMask);
-          
-          // City lights on dark side
-          float lights = step(0.52, continent) * fbm(uv * 32.0);
-          vec3 cityLights = vec3(1.0, 0.85, 0.4) * lights * 0.6;
-          
-          // Lighting
-          vec3 lightDir = normalize(vec3(1.0, 0.5, 0.8));
-          float diffuse = max(dot(vNormal, lightDir), 0.0);
-          float ambient = 0.08;
-          
-          // Dark side gets city lights
-          float darkSide = 1.0 - smoothstep(0.0, 0.15, diffuse);
-          surface = surface * (ambient + diffuse * 0.9) + cityLights * darkSide;
-          
-          // Atmosphere rim
-          float fresnel = pow(1.0 - max(dot(vNormal, normalize(-vPosition)), 0.0), 3.0);
-          vec3 atmosColor = vec3(0.15, 0.5, 1.0);
-          surface += atmosColor * fresnel * 0.4;
-          
-          // Cloud layer
-          float clouds = fbm(uv * 6.0 + vec2(uTime * 0.01, uTime * 0.005));
-          clouds = smoothstep(0.45, 0.7, clouds) * 0.3;
-          surface = mix(surface, vec3(0.8, 0.85, 0.9), clouds * diffuse);
-          
-          gl_FragColor = vec4(surface, 1.0);
-        }
-      `,
-    });
-  }, []);
-
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += 0.0015;
-      earthMaterial.uniforms.uTime.value = state.clock.elapsedTime;
-    }
-    if (atmosphereRef.current) {
-      atmosphereRef.current.rotation.y += 0.0015;
-    }
-  });
-
-  return (
-    <group>
-      {/* Earth */}
-      <mesh ref={meshRef} material={earthMaterial}>
-        <sphereGeometry args={[2.2, 128, 128]} />
-      </mesh>
-
-      {/* Atmosphere glow */}
-      <mesh ref={atmosphereRef} scale={1.06}>
-        <sphereGeometry args={[2.2, 64, 64]} />
-        <shaderMaterial
-          transparent
-          side={THREE.BackSide}
-          vertexShader={`
-            varying vec3 vNormal;
-            void main() {
-              vNormal = normalize(normalMatrix * normal);
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `}
-          fragmentShader={`
-            varying vec3 vNormal;
-            void main() {
-              float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.5);
-              gl_FragColor = vec4(0.1, 0.5, 1.0, intensity * 0.6);
-            }
-          `}
-        />
-      </mesh>
-    </group>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Floating particle ring around Earth                                */
-/* ------------------------------------------------------------------ */
-function OrbitRing() {
-  const ref = useRef<THREE.Points>(null);
-  const count = 300;
-
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2;
-      const r = 3.2 + (Math.random() - 0.5) * 0.3;
-      arr[i * 3] = Math.cos(angle) * r;
-      arr[i * 3 + 1] = (Math.random() - 0.5) * 0.15;
-      arr[i * 3 + 2] = Math.sin(angle) * r;
-    }
-    return arr;
-  }, []);
-
-  useFrame(() => {
-    if (ref.current) ref.current.rotation.y += 0.002;
-  });
-
-  return (
-    <points ref={ref} rotation={[0.3, 0, 0.1]}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.02} color="#00D4FF" transparent opacity={0.6} sizeAttenuation />
-    </points>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Landing Page Component                                             */
-/* ------------------------------------------------------------------ */
 interface LandingProps {
-  onEnter: () => void;
+  onEnter: (targetPage?: string) => void;
 }
+
+type OceanMode = 'currents' | 'ais' | 'sar' | 'bathymetry';
 
 export function Landing({ onEnter }: LandingProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeOceanMode, setActiveOceanMode] = useState<OceanMode>('currents');
+  const [selectedHotspot, setSelectedHotspot] = useState<string>('singapore');
+
+  // Keep video looping seamlessly
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onEnter('dashboard');
+  };
+
+  const featureCards = [
+    {
+      id: 'dashboard',
+      title: 'Command Center',
+      desc: 'Tactical maritime surveillance',
+      page: 'dashboard',
+      img: '/visuals/cards/social-track.jpg',
+      icon: Shield,
+    },
+    {
+      id: 'vessels',
+      title: 'AIS Fleet Track',
+      desc: '10,000+ live vessel tracking',
+      page: 'vessels',
+      img: '/visuals/cards/ai-mode.jpg',
+      icon: Radio,
+    },
+    {
+      id: 'spill-detection',
+      title: 'SAR AI Analysis',
+      desc: 'Sentinel-1 U-Net++ inference',
+      page: 'spill-detection',
+      img: '/visuals/cards/flood-dispatch.jpg',
+      icon: ScanEye,
+    },
+    {
+      id: 'fleet-builder',
+      title: 'Custom Ship Studio',
+      desc: 'Dark fleet kinematic simulator',
+      page: 'fleet-builder',
+      img: '/visuals/cards/crop-damage.jpg',
+      icon: SlidersHorizontal,
+    },
+    {
+      id: 'scenario-builder',
+      title: 'Drift Simulator',
+      desc: 'Copernicus reverse trajectory',
+      page: 'scenario-builder',
+      img: '/visuals/cards/social-track.jpg',
+      icon: FlaskConical,
+    },
+  ];
+
+  // Ocean Chokepoint Hotspots with real telemetry
+  const hotspots: Record<
+    string,
+    {
+      name: string;
+      coords: string;
+      latDMS: string;
+      lonDMS: string;
+      trafficLoad: string;
+      driftVel: string;
+      driftDeg: number;
+      depth: string;
+      sst: string;
+      risk: 'NOMINAL' | 'ELEVATED' | 'CRITICAL';
+      riskColor: string;
+      tankers: number;
+      sarStatus: string;
+    }
+  > = {
+    singapore: {
+      name: 'Singapore Strait TSS · Sector Alpha',
+      coords: '01° 15.0\' N, 103° 48.0\' E',
+      latDMS: '01° 15.0\' N',
+      lonDMS: '103° 48.0\' E',
+      trafficLoad: '87%',
+      driftVel: '1.42 kn',
+      driftDeg: 118,
+      depth: '-24.5 m (Shelf)',
+      sst: '28.6°C',
+      risk: 'ELEVATED',
+      riskColor: '#F59E0B',
+      tankers: 412,
+      sarStatus: 'Sentinel-1C Ingest: 14m ago',
+    },
+    malacca: {
+      name: 'Strait of Malacca · One Fathom Bank',
+      coords: '02° 53.0\' N, 101° 00.0\' E',
+      latDMS: '02° 53.0\' N',
+      lonDMS: '101° 00.0\' E',
+      trafficLoad: '94%',
+      driftVel: '1.85 kn',
+      driftDeg: 305,
+      depth: '-38.0 m (Channel)',
+      sst: '29.1°C',
+      risk: 'CRITICAL',
+      riskColor: '#EF4444',
+      tankers: 588,
+      sarStatus: 'Anomaly: Bilge slick detected',
+    },
+    sunda: {
+      name: 'Sunda Strait Chokepoint',
+      coords: '05° 55.0\' S, 105° 53.0\' E',
+      latDMS: '05° 55.0\' S',
+      lonDMS: '105° 53.0\' E',
+      trafficLoad: '62%',
+      driftVel: '2.10 kn',
+      driftDeg: 195,
+      depth: '-120 m (Deep Trench)',
+      sst: '27.8°C',
+      risk: 'NOMINAL',
+      riskColor: '#5FE38A',
+      tankers: 176,
+      sarStatus: 'Clear swath · No slicks',
+    },
+  };
+
+  const currentHotspot = hotspots[selectedHotspot] || hotspots.singapore;
+
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#020810]">
-      {/* 3D Canvas — fullscreen background */}
-      <div className="absolute inset-0">
-        <Canvas camera={{ position: [0, 0, 6], fov: 45 }} dpr={[1, 2]}>
-          <ambientLight intensity={0.05} />
-          <directionalLight position={[5, 3, 5]} intensity={0.8} />
-          <Stars radius={100} depth={60} count={3000} factor={4} saturation={0} fade speed={0.5} />
-          <Earth />
-          <OrbitRing />
-        </Canvas>
+    <div className="relative min-h-screen w-full bg-[#060B10] text-white overflow-x-hidden font-sans select-none">
+      {/* 1. 4K LOOPING EARTH VIDEO GLOBE */}
+      <div className="site-video-background" aria-hidden="true">
+        <video
+          ref={videoRef}
+          className="site-video-element"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          src="/home.mp4"
+          onEnded={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
+        />
+        <div className="site-video-overlay" />
       </div>
 
-      {/* Radial gradient overlay for depth */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(2,8,16,0.85)_70%,rgba(2,8,16,0.98)_100%)]" />
+      {/* 2. DYNAMIC OCEANIC SURVEILLANCE HUD OVERLAY (Animated Streamlines, Shipping Lanes, Sonar) */}
+      <div className="ocean-surveillance-hud-layer pointer-events-none" aria-hidden="true">
+        {/* Dynamic Ocean Current Vector Streamlines */}
+        {activeOceanMode === 'currents' && (
+          <svg className="ocean-svg-overlay" viewBox="0 0 1920 1080" fill="none">
+            <defs>
+              <linearGradient id="currentGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#5FE38A" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#5BC0BE" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id="currentGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#5BC0BE" stopOpacity="0.7" />
+                <stop offset="100%" stopColor="#5FE38A" stopOpacity="0" />
+              </linearGradient>
+              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
 
-      {/* Scan-line effect */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,212,255,0.15) 2px, rgba(0,212,255,0.15) 3px)',
-        }}
-      />
+            {/* Ocean Current Streamline curves flowing across the ocean basin */}
+            <path
+              d="M 680 540 Q 840 480 1020 530 T 1280 590"
+              stroke="url(#currentGrad1)"
+              strokeWidth="2.5"
+              strokeDasharray="14 10"
+              className="animate-flow-dash"
+              filter="url(#glow)"
+            />
+            <path
+              d="M 720 570 Q 880 510 1060 560 T 1320 620"
+              stroke="url(#currentGrad1)"
+              strokeWidth="2"
+              strokeDasharray="18 12"
+              className="animate-flow-dash-slow"
+              opacity="0.85"
+            />
+            <path
+              d="M 760 600 Q 920 540 1100 590 T 1360 650"
+              stroke="url(#currentGrad2)"
+              strokeWidth="1.8"
+              strokeDasharray="12 8"
+              className="animate-flow-dash-fast"
+              opacity="0.7"
+            />
+            <path
+              d="M 640 510 Q 800 450 980 500 T 1240 560"
+              stroke="#5BC0BE"
+              strokeWidth="1.2"
+              strokeDasharray="8 14"
+              className="animate-flow-dash"
+              opacity="0.5"
+            />
 
-      {/* Content overlay */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center px-6">
-        {/* Top nav */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-5">
-          <div className="flex items-center gap-2.5">
-            <Waves className="text-[#00D4FF]" size={22} />
-            <span className="text-lg font-semibold tracking-tight text-white">
-              Sagar<span className="text-[#00D4FF]">Drishti</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-6 text-xs text-white/40 tracking-wider uppercase">
-            <span>Maritime Intelligence</span>
-            <span className="w-px h-3 bg-white/10" />
-            <span>Real-Time Surveillance</span>
-          </div>
-        </div>
+            {/* Velocity Vectors (Arrow nodes) */}
+            <g className="animate-pulse-subtle">
+              <circle cx="880" cy="510" r="3.5" fill="#5FE38A" />
+              <line x1="880" y1="510" x2="905" y2="520" stroke="#5FE38A" strokeWidth="1.5" markerEnd="url(#arrow)" />
+              <text x="912" y="524" fill="#5FE38A" fontSize="9" fontFamily="monospace" fontWeight="bold">
+                1.42 kn → 118°
+              </text>
 
-        {/* Hero content */}
-        <div className="text-center max-w-3xl space-y-8 animate-fade-in">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-dim/60 bg-[rgba(0,212,255,0.06)]">
-            <Shield size={13} className="text-[#00D4FF]" />
-            <span className="text-[0.7rem] font-medium tracking-widest uppercase text-[#00D4FF]">
-              Maritime Oil Spill Intelligence Platform
-            </span>
-          </div>
+              <circle cx="1060" cy="560" r="3.5" fill="#5BC0BE" />
+              <line x1="1060" y1="560" x2="1085" y2="572" stroke="#5BC0BE" strokeWidth="1.5" />
+              <text x="1092" y="576" fill="#5BC0BE" fontSize="9" fontFamily="monospace">
+                1.18 kn → 125°
+              </text>
+            </g>
+          </svg>
+        )}
 
-          {/* Main headline */}
-          <h1 className="text-5xl md:text-6xl font-bold leading-[1.1] tracking-tight">
-            <span className="text-white">Protecting Our</span>
-            <br />
-            <span className="bg-gradient-to-r from-[#00D4FF] via-[#00B4D8] to-[#0077B6] bg-clip-text text-transparent">
-              Oceans with AI
-            </span>
-          </h1>
+        {/* AIS Maritime Shipping Lanes with Active Vessels */}
+        {activeOceanMode === 'ais' && (
+          <svg className="ocean-svg-overlay" viewBox="0 0 1920 1080" fill="none">
+            {/* Singapore TSS Eastbound & Westbound Lanes */}
+            <path
+              d="M 660 520 L 890 510 L 1020 540 L 1220 620"
+              stroke="#5FE38A"
+              strokeWidth="2.5"
+              strokeDasharray="6 4"
+              className="opacity-80"
+            />
+            <path
+              d="M 670 540 L 900 530 L 1030 560 L 1230 640"
+              stroke="#5BC0BE"
+              strokeWidth="1.8"
+              strokeDasharray="6 4"
+              className="opacity-70"
+            />
 
-          {/* Description */}
-          <p className="text-base md:text-lg text-white/50 max-w-xl mx-auto leading-relaxed">
-            Real-time satellite SAR oil spill detection, 10,000+ vessel AIS tracking,
-            dark-vessel attribution, and reverse-drift origin reconstruction
-            powered by U-Net++ deep learning.
-          </p>
+            {/* Vessel Nodes along the corridor (Matching user's reference UI) */}
+            <g>
+              {/* VLCC Tanker */}
+              <circle cx="890" cy="510" r="6" fill="#5FE38A" className="animate-ping" opacity="0.4" />
+              <circle cx="890" cy="510" r="4" fill="#5FE38A" />
+              <polygon points="890,503 895,516 890,513 885,516" fill="#060B10" transform="rotate(95 890 510)" />
 
-          {/* Feature pills */}
-          <div className="flex items-center justify-center gap-3 flex-wrap">
-            {[
-              { icon: Satellite, label: 'Sentinel-1 SAR' },
-              { icon: Radio, label: '10K+ AIS Vessels' },
-              { icon: Anchor, label: 'Anomaly Detection' },
-            ].map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-white/[0.06] bg-white/[0.03] text-white/40 text-xs"
-              >
-                <Icon size={12} />
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
+              {/* Chemical Tanker */}
+              <circle cx="1020" cy="540" r="4.5" fill="#3B82F6" />
+              <circle cx="1020" cy="540" r="8" stroke="#3B82F6" strokeWidth="1" strokeDasharray="2 2" className="animate-spin-slow" />
 
-          {/* Enter button */}
-          <div className="pt-4">
-            <button
-              onClick={onEnter}
-              className="group relative inline-flex items-center gap-3 px-8 py-3.5 rounded-xl
-                bg-gradient-to-r from-[#00D4FF] to-[#0077B6]
-                text-white font-semibold text-sm tracking-wide
-                shadow-[0_0_40px_rgba(0,212,255,0.3)]
-                hover:shadow-[0_0_60px_rgba(0,212,255,0.5)]
-                hover:scale-[1.03]
-                transition-all duration-300"
-            >
-              Enter Command Center
-              <ChevronRight
-                size={18}
-                className="transition-transform group-hover:translate-x-1"
+              {/* Suspect Tanker (Dark Fleet / Anomaly) */}
+              <circle cx="780" cy="516" r="5" fill="#EF4444" className="animate-pulse" />
+              <circle cx="780" cy="516" r="12" stroke="#EF4444" strokeWidth="1" strokeDasharray="3 3" />
+              <text x="796" y="520" fill="#EF4444" fontSize="10" fontFamily="monospace" fontWeight="bold">
+                DARK FLEET · AIS OFF
+              </text>
+            </g>
+          </svg>
+        )}
+
+        {/* Sentinel-1 SAR Radar Swath Sweep */}
+        {activeOceanMode === 'sar' && (
+          <svg className="ocean-svg-overlay" viewBox="0 0 1920 1080" fill="none">
+            {/* SAR Swath Polygon */}
+            <polygon
+              points="740,380 980,360 1180,680 940,710"
+              fill="rgba(95, 227, 138, 0.08)"
+              stroke="#5FE38A"
+              strokeWidth="1.5"
+              strokeDasharray="8 6"
+              className="animate-pulse-subtle"
+            />
+            {/* Radar Beam Scan Line */}
+            <line
+              x1="860"
+              y1="370"
+              x2="1060"
+              y2="695"
+              stroke="#5FE38A"
+              strokeWidth="2"
+              className="animate-radar-beam"
+              filter="drop-shadow(0 0 8px #5FE38A)"
+            />
+            <text x="750" y="405" fill="#5FE38A" fontSize="11" fontFamily="monospace" fontWeight="bold">
+              SENTINEL-1C · C-BAND SAR (IW SLC)
+            </text>
+            <text x="750" y="420" fill="#94A3B8" fontSize="9" fontFamily="monospace">
+              INCIDENCE: 38.4° · VV/VH CO-POL
+            </text>
+          </svg>
+        )}
+
+        {/* Bathymetry & Acoustic Sonar Grid */}
+        {activeOceanMode === 'bathymetry' && (
+          <svg className="ocean-svg-overlay" viewBox="0 0 1920 1080" fill="none">
+            {/* Concentric Sonar Rings */}
+            <circle cx="960" cy="540" r="80" stroke="#5BC0BE" strokeWidth="1" strokeDasharray="4 4" opacity="0.6" />
+            <circle cx="960" cy="540" r="160" stroke="#5BC0BE" strokeWidth="1" strokeDasharray="6 6" opacity="0.4" />
+            <circle cx="960" cy="540" r="260" stroke="#5BC0BE" strokeWidth="1" strokeDasharray="8 8" opacity="0.25" />
+            
+            {/* Sonar Depth Soundings */}
+            <g fill="#5BC0BE" fontFamily="monospace" fontSize="10">
+              <text x="890" y="535">-22.4 m (Shelf)</text>
+              <text x="1050" y="580">-85.0 m (Passage)</text>
+              <text x="1180" y="660">-1,240 m (Abyssal)</text>
+            </g>
+          </svg>
+        )}
+      </div>
+
+      {/* 3. TOP NAVIGATION BAR */}
+      <header className="relative z-50 flex items-center justify-between px-6 md:px-10 py-4 backdrop-blur-xl bg-[#060B10]/60 border-b border-white/[0.08]">
+        <div className="flex items-center gap-3">
+          {/* Orbital Radar Mark */}
+          <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
+            <svg width="30" height="30" viewBox="0 0 28 28" fill="none">
+              <circle
+                cx="14"
+                cy="14"
+                r="11"
+                stroke="#5FE38A"
+                strokeWidth="1.8"
+                strokeDasharray="44 12"
+                className="opacity-90"
               />
-              {/* Pulse ring */}
-              <span className="absolute inset-0 rounded-xl border border-[#00D4FF]/30 animate-ping opacity-20" />
-            </button>
+              <circle cx="14" cy="14" r="5" fill="#5FE38A" />
+              <ellipse
+                cx="14"
+                cy="14"
+                rx="13"
+                ry="5"
+                stroke="#5FE38A"
+                strokeWidth="1.2"
+                transform="rotate(-25 14 14)"
+                strokeDasharray="28 8"
+                opacity="0.8"
+              />
+            </svg>
+          </div>
+          <div>
+            <span className="text-[19px] font-extrabold tracking-tight text-white leading-tight">
+              Sagar<span className="text-[#5FE38A]">Drishti</span>
+            </span>
+            <div className="text-[8px] font-bold tracking-[0.2em] text-[#94A3B8] uppercase">
+              MARITIME & OCEAN INTELLIGENCE
+            </div>
           </div>
         </div>
 
-        {/* Bottom stats bar */}
-        <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-10">
+        {/* Center Nav Link Capsules */}
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.06]">
           {[
-            { value: '10,001', label: 'Vessels Tracked' },
-            { value: '99.7 MB', label: 'U-Net++ Model' },
-            { value: '<2s', label: 'Detection Latency' },
-            { value: '6', label: 'SAR Regions' },
-          ].map(({ value, label }) => (
-            <div key={label} className="text-center">
-              <div className="text-lg font-semibold text-white/80">{value}</div>
-              <div className="text-[0.6rem] text-white/30 uppercase tracking-wider">{label}</div>
-            </div>
+            { label: 'Overview', page: 'dashboard' },
+            { label: 'AIS Fleet Track', page: 'vessels' },
+            { label: 'SAR Spill AI', page: 'spill-detection' },
+            { label: 'Drift Simulator', page: 'scenario-builder' },
+          ].map((item) => (
+            <button
+              key={item.label}
+              onClick={() => onEnter(item.page)}
+              className="px-3.5 py-1 text-xs text-[#CBD5E1] hover:text-white rounded-full hover:bg-white/[0.06] transition-all"
+            >
+              {item.label}
+            </button>
           ))}
         </div>
-      </div>
+
+        {/* Enter CTA */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onEnter('dashboard')}
+            className="btn-sat-primary"
+          >
+            <span>Launch Command Center</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      </header>
+
+      {/* 4. MAIN HERO SECTION WITH TACTICAL OCEAN HUD CARDS */}
+      <main className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 pt-8 pb-20">
+        <div className="flex flex-col lg:flex-row items-start justify-between min-h-[460px] gap-8">
+          {/* Left Hero Text & Search */}
+          <div className="max-w-[580px] z-10 pt-2">
+            {/* Eyebrow */}
+            <div className="flex items-center gap-2 mb-3.5">
+              <span className="w-5 h-0.5 bg-[#5FE38A] rounded-full inline-block" />
+              <span className="font-mono text-[11px] font-bold tracking-[0.16em] text-[#94A3B8] uppercase">
+                COPERNICUS DRIFT · SENTINEL-1 SAR · DARK FLEET AIS
+              </span>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-extrabold tracking-[-0.035em] text-white leading-[1.08] mb-4">
+              Ocean Intelligence,
+              <br />
+              <span className="text-[#5FE38A]">Made Queryable.</span>
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-[14.5px] text-[#94A3B8] leading-relaxed mb-6 max-w-[520px]">
+              Sentinel-1 SAR semantic segmentation meets 10,000+ real-time AIS vessel telemetry and Copernicus surface currents.
+              Detect oil discharges, simulate reverse ocean drift, and unmask dark fleet polluters.
+            </p>
+
+            {/* SatQuery Search Bar */}
+            <form onSubmit={handleSearchSubmit} className="home-search-bar">
+              <Search size={18} className="text-[#64748B] shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Query MMSI 566780000, Singapore Strait TSS, or SAR spill coordinates…"
+                className="w-full text-[14px] text-white placeholder-[#64748B] bg-transparent border-none outline-none"
+              />
+              <button
+                type="submit"
+                className="btn-sat-primary px-4 py-2 shrink-0 text-xs"
+              >
+                <span>Query</span>
+                <ArrowRight size={12} />
+              </button>
+            </form>
+
+            {/* Quick Example Query Pills */}
+            <div className="flex items-center gap-2 flex-wrap pt-1 mb-6">
+              <span className="text-[11px] text-[#64748B] font-medium">Try query:</span>
+              {[
+                'Sentinel-1 C-Band scene in Singapore Strait',
+                'Prime suspect vessel attribution',
+                'Backtrack discharge 8h reverse drift',
+              ].map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  onClick={() => onEnter('dashboard')}
+                  className="example-pill text-[11.5px]"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+
+            {/* Interactive Ocean Layer Selector Pills */}
+            <div className="pt-2">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-[#94A3B8] mb-2 flex items-center gap-2">
+                <Waves size={13} className="text-[#5FE38A]" />
+                <span>Ocean Surveillance Modes</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { id: 'currents', label: 'Ocean Currents & Drift', icon: Waves },
+                  { id: 'ais', label: 'AIS Shipping Lanes', icon: Ship },
+                  { id: 'sar', label: 'Sentinel-1 SAR Swaths', icon: Radar },
+                  { id: 'bathymetry', label: 'Sonar Bathymetry', icon: Anchor },
+                ].map((mode) => {
+                  const Icon = mode.icon;
+                  const isActive = activeOceanMode === mode.id;
+                  return (
+                    <button
+                      key={mode.id}
+                      onClick={() => setActiveOceanMode(mode.id as OceanMode)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        isActive
+                          ? 'bg-[#5FE38A]/15 text-[#5FE38A] border border-[#5FE38A]/50 shadow-[0_0_12px_rgba(95,227,138,0.2)]'
+                          : 'bg-white/[0.04] text-[#94A3B8] border border-white/[0.08] hover:text-white hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      <Icon size={12} />
+                      <span>{mode.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Floating Ocean Tactical HUD (Matching User Reference Image Design) */}
+          <div className="w-full lg:w-auto flex flex-col items-end gap-4 z-20">
+            {/* Chokepoint Selector Pills */}
+            <div className="flex items-center gap-1.5 bg-[#0D1720]/80 p-1 rounded-xl border border-white/[0.08] backdrop-blur-md">
+              <span className="text-[10px] font-mono text-[#94A3B8] px-2 uppercase">Surveillance Target:</span>
+              {[
+                { id: 'singapore', label: 'Singapore TSS' },
+                { id: 'malacca', label: 'Malacca Strait' },
+                { id: 'sunda', label: 'Sunda Strait' },
+              ].map((hp) => (
+                <button
+                  key={hp.id}
+                  onClick={() => setSelectedHotspot(hp.id)}
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all ${
+                    selectedHotspot === hp.id
+                      ? 'bg-[#5FE38A] text-[#060B10] font-bold shadow-[0_2px_8px_rgba(95,227,138,0.3)]'
+                      : 'text-[#CBD5E1] hover:text-white hover:bg-white/[0.05]'
+                  }`}
+                >
+                  {hp.label}
+                </button>
+              ))}
+            </div>
+
+            {/* THE FROSTED GLASS TACTICAL OCEAN CARD (User's reference image style) */}
+            <div className="ocean-tactical-card group">
+              {/* Card Header with Directional Pointer Reticle */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  {/* Circular Radar Bearing Reticle */}
+                  <div className="relative w-9 h-9 flex items-center justify-center rounded-full bg-[#5FE38A]/10 border border-[#5FE38A]/30">
+                    {/* Compass North Ring */}
+                    <div
+                      className="absolute inset-0 rounded-full border border-dashed border-[#5FE38A]/40"
+                      style={{ transform: `rotate(${currentHotspot.driftDeg}deg)` }}
+                    />
+                    {/* Directional Heading Pointer Arrow */}
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="#5FE38A"
+                      className="transition-transform duration-500"
+                      style={{ transform: `rotate(${currentHotspot.driftDeg}deg)` }}
+                    >
+                      <path d="M12 2L4 21L12 17L20 21L12 2Z" />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <div className="text-[11px] font-mono uppercase tracking-wider text-[#94A3B8]">
+                      Maritime Traffic Density
+                    </div>
+                    <div className="text-[13px] font-bold text-white truncate max-w-[200px]">
+                      {currentHotspot.name.split('·')[0]}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inspect Action Arrow */}
+                <button
+                  onClick={() => onEnter('vessels')}
+                  className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-[#5FE38A] hover:text-[#060B10] text-[#94A3B8] transition-all"
+                  title="Inspect in AIS Fleet Track"
+                >
+                  <ArrowUpRight size={16} />
+                </button>
+              </div>
+
+              {/* Big Percentage Metric (Matching 'Passenger Load 87%' from reference image) */}
+              <div className="flex items-baseline justify-between mb-3.5 pb-3 border-b border-white/[0.08]">
+                <div>
+                  <div className="text-3xl font-extrabold text-white tracking-tight flex items-baseline gap-1">
+                    <span>{currentHotspot.trafficLoad}</span>
+                    <span className="text-xs font-mono font-medium text-[#5FE38A]">LOAD</span>
+                  </div>
+                  <div className="text-[10.5px] text-[#94A3B8] mt-0.5">
+                    {currentHotspot.tankers} tankers active in corridor
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold"
+                    style={{
+                      backgroundColor: `${currentHotspot.riskColor}20`,
+                      color: currentHotspot.riskColor,
+                      border: `1px solid ${currentHotspot.riskColor}50`,
+                    }}
+                  >
+                    <AlertTriangle size={10} />
+                    <span>{currentHotspot.risk}</span>
+                  </div>
+                  <div className="text-[9.5px] font-mono text-[#64748B] mt-1">DISCHARGE RISK</div>
+                </div>
+              </div>
+
+              {/* Real Oceanographic Telemetry Grid */}
+              <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                  <div className="text-[#64748B] text-[9.5px] flex items-center gap-1 mb-0.5">
+                    <Waves size={10} className="text-[#5FE38A]" />
+                    <span>SURFACE CURRENT</span>
+                  </div>
+                  <div className="font-bold text-white flex items-center justify-between">
+                    <span>{currentHotspot.driftVel}</span>
+                    <span className="text-[#5FE38A] font-normal">{currentHotspot.driftDeg}°</span>
+                  </div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                  <div className="text-[#64748B] text-[9.5px] flex items-center gap-1 mb-0.5">
+                    <Anchor size={10} className="text-[#5BC0BE]" />
+                    <span>BATHYMETRIC DEPTH</span>
+                  </div>
+                  <div className="font-bold text-[#5BC0BE]">{currentHotspot.depth}</div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                  <div className="text-[#64748B] text-[9.5px] flex items-center gap-1 mb-0.5">
+                    <Thermometer size={10} className="text-[#F59E0B]" />
+                    <span>SEA TEMP (SST)</span>
+                  </div>
+                  <div className="font-bold text-white">{currentHotspot.sst}</div>
+                </div>
+
+                <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
+                  <div className="text-[#64748B] text-[9.5px] flex items-center gap-1 mb-0.5">
+                    <Radar size={10} className="text-[#3B82F6]" />
+                    <span>SAR COVERAGE</span>
+                  </div>
+                  <div className="font-bold text-[#3B82F6] truncate">Sentinel-1C</div>
+                </div>
+              </div>
+
+              {/* Waypoint Way-markers (Visual nod to the dots in reference image) */}
+              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/[0.06] text-[10px] text-[#94A3B8]">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#3B82F6] inline-block shadow-[0_0_6px_#3B82F6]" />
+                  <span className="w-2 h-2 rounded-full bg-[#EF4444] inline-block shadow-[0_0_6px_#EF4444]" />
+                  <span className="w-2 h-2 rounded-full bg-[#F59E0B] inline-block shadow-[0_0_6px_#F59E0B]" />
+                  <span className="w-2 h-2 rounded-full bg-[#5FE38A] inline-block shadow-[0_0_6px_#5FE38A]" />
+                  <span className="ml-1 text-[9.5px] font-mono">4 SENSOR NODES</span>
+                </div>
+                <span className="font-mono text-[#5FE38A] text-[9.5px]">{currentHotspot.coords}</span>
+              </div>
+            </div>
+
+            {/* Bottom Realtime Marine Reticle Coordinates */}
+            <div className="flex items-center gap-3">
+              <div className="reticle-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5FE38A" strokeWidth="1.6">
+                  <circle cx="12" cy="12" r="7" strokeDasharray="3 3" />
+                  <line x1="12" y1="2" x2="12" y2="6" />
+                  <line x1="12" y1="18" x2="12" y2="22" />
+                  <line x1="2" y1="12" x2="6" y2="12" />
+                  <line x1="18" y1="12" x2="22" y2="12" />
+                </svg>
+              </div>
+              <div className="reticle-coords">
+                <span className="font-mono text-xs font-bold text-[#5FE38A]">{currentHotspot.latDMS}</span>
+                <span className="font-mono text-xs text-[#5FE38A]/70">{currentHotspot.lonDMS}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. SATQUERY 5-CARD HORIZONTAL MODULE TILES */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-8 mb-6" aria-label="Feature modules">
+          {featureCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <button
+                key={card.id}
+                onClick={() => onEnter(card.page)}
+                style={{ backgroundImage: `url(${card.img})` }}
+                className="module-card-tile group text-left cursor-pointer focus:outline-none"
+              >
+                <div className="module-card-overlay" />
+                <div className="module-card-text">
+                  <div className="flex items-center gap-1.5 mb-1 text-[#5FE38A]">
+                    <Icon size={14} />
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider">
+                      MODULE
+                    </span>
+                  </div>
+                  <h3 className="group-hover:text-[#5FE38A] transition-colors">
+                    {card.title}
+                  </h3>
+                  <p>{card.desc}</p>
+                </div>
+                <div className="module-card-arrow group-hover:scale-110">
+                  <ArrowRight size={14} />
+                </div>
+              </button>
+            );
+          })}
+        </section>
+
+        {/* 6. OCEANOGRAPHIC STATS SUMMARY RIBBON */}
+        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] backdrop-blur-xl">
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="stat-col">
+              <strong>10,001</strong>
+              <span>AIS Ships Tracked</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-col">
+              <strong className="stat-accent">1.42 kn</strong>
+              <span>Copernicus Drift Drift</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-col">
+              <strong className="text-[#5BC0BE]">C-Band</strong>
+              <span>Sentinel-1 SAR Radar</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-col">
+              <strong className="text-[#F59E0B]">28.6°C</strong>
+              <span>Sea Surface Temp</span>
+            </div>
+            <div className="stat-divider" />
+            <div className="stat-col">
+              <strong>&lt; 2.0s</strong>
+              <span>Inference Latency</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onEnter('dashboard')}
+            className="btn-sat-ghost text-xs"
+          >
+            <span>Enter Realtime Command Deck</span>
+            <ArrowRight size={13} />
+          </button>
+        </div>
+      </main>
     </div>
   );
 }

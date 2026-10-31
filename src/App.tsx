@@ -44,7 +44,16 @@ function App() {
   }, []);
 
   if (inLanding) {
-    return <Landing onEnter={() => setInLanding(false)} />;
+    return (
+      <Landing
+        onEnter={(targetPage?: string) => {
+          if (targetPage) {
+            setPage(targetPage as PageId);
+          }
+          setInLanding(false);
+        }}
+      />
+    );
   }
 
   return (
@@ -54,6 +63,8 @@ function App() {
         totalVessels={totalVessels}
         sarAvailable={health?.sar_available === true}
         unetLoaded={health?.unet === true}
+        activePage={page}
+        onNavigate={setPage}
         onInvestigate={handleInvestigate}
         onOpenLanding={() => setInLanding(true)}
       />
@@ -62,7 +73,7 @@ function App() {
         onNavigate={setPage}
         anomalyCount={anomalyCount}
       />
-      <main className="flex-1 ml-56 mt-14 overflow-hidden">
+      <main className="flex-1 ml-60 mt-16 overflow-hidden">
         <ErrorBoundary fallbackTitle={`Recovered view: ${page}`}>
           <div key={page} className="h-full animate-fade-in">
             {page === 'dashboard' && (

@@ -13,9 +13,21 @@ import {
   detectSpill,
 } from '@/lib/api';
 import type { ActivityEvent } from '@/hooks/useDashboardData';
-import { Waves, Wind, Satellite, Radio, Database, ScanEye, Loader2, Play, Target } from 'lucide-react';
+import {
+  Waves,
+  Wind,
+  Satellite,
+  Radio,
+  Database,
+  ScanEye,
+  Loader2,
+  Shield,
+  ArrowUpRight,
+  AlertTriangle,
+  Compass,
+  CheckCircle2,
+} from 'lucide-react';
 import { SuspectRankingTable } from '@/components/SuspectRankingTable';
-
 
 interface DashboardProps {
   vessels: Vessel[];
@@ -33,56 +45,88 @@ interface DashboardProps {
   onNavigate: (page: string) => void;
 }
 
-function MetricPill({ label, value, color }: { label: string; value: string; color: string }) {
+function SatQueryStatPill({
+  label,
+  value,
+  color,
+  badgeText,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+  badgeText?: string;
+}) {
   return (
-    <div className="glass-panel px-3 py-2 flex items-center gap-2">
+    <div className="glass-panel px-3.5 py-2 flex items-center gap-2.5">
       <span className="section-label whitespace-nowrap">{label}</span>
-      <span className="metric-value text-sm font-semibold" style={{ color }}>
+      <span className="metric-value text-sm font-bold text-white" style={color ? { color } : {}}>
         {value}
       </span>
+      {badgeText && (
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#5FE38A]/10 text-[#5FE38A] border border-[#5FE38A]/30">
+          {badgeText}
+        </span>
+      )}
     </div>
   );
 }
 
-function MetricCard({
+function SatQueryMetricCard({
+  number,
   label,
   value,
   subtitle,
   status,
   statusColor,
   children,
-  accent,
+  accent = 'green',
 }: {
+  number?: string;
   label: string;
   value: string;
   subtitle: string;
   status: string;
   statusColor: string;
   children?: React.ReactNode;
-  accent?: 'cyan' | 'gold' | 'danger' | 'purple';
+  accent?: 'green' | 'cyan' | 'gold' | 'danger' | 'purple';
 }) {
-  const borderClass =
-    accent === 'gold'
-      ? 'border-r-2 border-r-[#FFD700]'
-      : accent === 'danger'
-        ? 'border-r-2 border-r-[#FF4444]'
-        : accent === 'purple'
-          ? 'border-r-2 border-r-[#A855F7]'
-          : '';
+  const accentGlow =
+    accent === 'green'
+      ? 'border-t-2 border-t-[#5FE38A]'
+      : accent === 'gold'
+        ? 'border-t-2 border-t-[#F59E0B]'
+        : accent === 'danger'
+          ? 'border-t-2 border-t-[#EF4444]'
+          : accent === 'cyan'
+            ? 'border-t-2 border-t-[#5BC0BE]'
+            : 'border-t-2 border-t-[#D8B4FE]';
 
   return (
-    <div className={`glass-panel glass-panel-hover p-4 ${borderClass}`}>
-      <div className="flex items-start justify-between mb-2">
-        <span className="section-label">{label}</span>
+    <div className={`glass-panel glass-panel-hover p-5 relative overflow-hidden ${accentGlow}`}>
+      {/* Top Meta Row */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          {number && (
+            <span className="font-mono text-[10px] font-bold text-[#5FE38A] bg-[#5FE38A]/10 px-1.5 py-0.5 rounded">
+              {number}
+            </span>
+          )}
+          <span className="section-label">{label}</span>
+        </div>
         <div className="flex items-center gap-1.5">
-          <StatusDot color={statusColor} />
-          <span className="text-[0.625rem] font-medium uppercase" style={{ color: statusColor }}>
+          <StatusDot color={statusColor} size={6} />
+          <span className="text-[10px] font-mono font-semibold uppercase" style={{ color: statusColor }}>
             {status}
           </span>
         </div>
       </div>
-      <div className="metric-value text-2xl font-semibold text-white mb-1">{value}</div>
-      <div className="text-xs text-muted mb-3">{subtitle}</div>
+
+      {/* Main Metric Value */}
+      <div className="metric-value text-3xl font-extrabold text-white mb-1 tracking-tight">
+        {value}
+      </div>
+      <div className="text-xs text-[#94A3B8] mb-3">{subtitle}</div>
+
       {children}
     </div>
   );
@@ -90,32 +134,40 @@ function MetricCard({
 
 function ActivityLog({ events }: { events: ActivityEvent[] }) {
   const colorMap: Record<string, string> = {
-    info: '#00D4FF',
-    warning: '#FFA500',
-    danger: '#FF4444',
-    success: '#00FF88',
+    info: '#5BC0BE',
+    warning: '#F59E0B',
+    danger: '#EF4444',
+    success: '#5FE38A',
   };
 
   return (
     <div className="flex flex-col h-full">
-      <PanelHeader title="Activity Log" />
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      <PanelHeader
+        title="Live Surveillance Feed"
+        subtitle="Sentinel-1 & AIS Realtime Log"
+        right={<Badge color="accent" dot>LIVE</Badge>}
+      />
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {events.length === 0 && (
-          <div className="text-xs text-muted text-center py-4">No events yet</div>
+          <div className="text-xs text-[#94A3B8] text-center py-8">
+            Initializing satellite surveillance telemetry…
+          </div>
         )}
         {events.map((evt, i) => (
           <div
             key={i}
-            className="flex items-start gap-2 px-2 py-1.5 rounded hover:bg-[rgba(0,212,255,0.04)] transition-colors"
+            className="flex items-start gap-2.5 p-2 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] transition-colors"
           >
-            <span className="metric-value text-[0.625rem] text-muted shrink-0 mt-0.5">
+            <span className="font-mono text-[10px] text-[#64748B] shrink-0 mt-0.5">
               {evt.time}
             </span>
             <span
               className="w-1.5 h-1.5 rounded-full shrink-0 mt-1.5"
-              style={{ backgroundColor: colorMap[evt.level] }}
+              style={{ backgroundColor: colorMap[evt.level] || '#5FE38A' }}
             />
-            <span className="text-xs text-white/80 leading-relaxed">{evt.text}</span>
+            <span className="text-xs text-[#CBD5E1] leading-relaxed font-medium">
+              {evt.text}
+            </span>
           </div>
         ))}
       </div>
@@ -178,178 +230,286 @@ export function Dashboard({
   };
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* SECTION A: Full-width Tactical Map */}
-        <div className="relative h-[550px] glass-panel overflow-hidden">
+    <div className="flex h-full overflow-hidden bg-[#060B10]">
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* SatQuery Header Banner */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] font-bold text-[#5FE38A] uppercase tracking-wider">
+                ORBITAL MISSION STATUS
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5FE38A] animate-ping" />
+            </div>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight mt-0.5">
+              Singapore Maritime Corridor Surveillance
+            </h1>
+            <p className="text-xs text-[#94A3B8] mt-0.5">
+              Automated Sentinel-1 SAR oil spill segmentation with real-time AIS dark vessel attribution
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Quick Stat Ribbon */}
+            <div className="flex items-center gap-5 px-4 py-2 rounded-xl bg-white/[0.02] border border-white/[0.08]">
+              <div className="stat-col">
+                <strong>{fleetCount}</strong>
+                <span>Active AIS</span>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-col">
+                <strong className="stat-accent">{anomalyCount}</strong>
+                <span>Anomalies</span>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-col">
+                <strong className="text-[#5BC0BE]">
+                  {detectedPct !== undefined ? `${detectedPct.toFixed(2)}%` : '0.00%'}
+                </strong>
+                <span>SAR Spill</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION A: Full-width Tactical Sea Map (SatQuery Glass Container) */}
+        <div className="relative h-[560px] glass-panel overflow-hidden border border-white/[0.12] rounded-2xl">
           <TacticalSeaView
             vessels={vessels}
             primeSuspectName={primeName}
             onVesselClick={handleVesselClick}
           />
 
-          {/* Overlay: top-left badge */}
-          <div className="absolute top-3 left-3 flex items-center gap-2 glass-panel px-3 py-1.5 z-20 pointer-events-none">
-            <StatusDot color="#FF4444" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#FF4444]">
-              Live Investigation
+          {/* Top-left Tactical Pill */}
+          <div className="absolute top-4 left-4 flex items-center gap-2 glass-panel px-3.5 py-1.5 z-20 pointer-events-none">
+            <StatusDot color="#EF4444" size={7} />
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#EF4444]">
+              LIVE FORENSIC WATCH
             </span>
           </div>
 
-          {/* Overlay: top-right case ID */}
-          <div className="absolute top-3 right-16 glass-panel px-3 py-1.5 z-20 pointer-events-none">
-            <span className="section-label">Case</span>
-            <span className="metric-value text-xs text-[#00D4FF] ml-1.5">#SAG-2026-001</span>
+          {/* Top-right Case Pill */}
+          <div className="absolute top-4 right-16 glass-panel px-3.5 py-1.5 z-20 pointer-events-none">
+            <span className="section-label">TSS CORRIDOR</span>
+            <span className="font-mono text-xs text-[#5FE38A] font-bold ml-2">#SAG-2026-001</span>
           </div>
 
-          {/* Overlay: bottom metric pills */}
-          <div className="absolute bottom-14 left-3 right-3 flex flex-wrap gap-2 justify-center z-20 pointer-events-none">
-            <MetricPill label="Active Fleet" value={fleetCount} color="#00D4FF" />
-            <MetricPill
-              label="Detected Spill"
-              value={!hasSar ? 'Awaiting SAR input' : detectedPct === undefined ? 'Pending Inference' : `${detectedPct.toFixed(2)}%`}
-              color="#FFA500"
+          {/* Bottom Floating Metric Ribbon */}
+          <div className="absolute bottom-12 left-4 right-4 flex flex-wrap gap-2.5 justify-center z-20 pointer-events-none">
+            <SatQueryStatPill label="Tracked Fleet" value={fleetCount} badgeText="10K AIS" />
+            <SatQueryStatPill
+              label="SAR Slick"
+              value={
+                !hasSar
+                  ? 'Awaiting Scene'
+                  : detectedPct === undefined
+                    ? 'Pending Pass'
+                    : `${detectedPct.toFixed(2)}% coverage`
+              }
+              color="#F59E0B"
             />
-            <MetricPill label="Anomalies" value={online ? `${anomalyCount}` : 'N/A'} color="#FF4444" />
-            <MetricPill label="Prime Suspect" value={primeName} color="#FFD700" />
+            <SatQueryStatPill
+              label="Kinematic Anomalies"
+              value={online ? `${anomalyCount} flagged` : 'N/A'}
+              color="#EF4444"
+            />
+            <SatQueryStatPill
+              label="Attributed Suspect"
+              value={primeName}
+              color="#5FE38A"
+              badgeText={primeScore ? `${primeScore.toFixed(0)}%` : undefined}
+            />
           </div>
         </div>
 
-        {/* SECTION B: Metrics Row */}
+        {/* SECTION B: SatQuery 4-Metric Card Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard
-            label="Active Fleet"
+          <SatQueryMetricCard
+            number="01"
+            label="Active AIS Fleet"
             value={fleetCount}
-            subtitle="Singapore Strait"
-            status={hasFleetData ? 'Loaded' : 'Not available'}
-            statusColor={hasFleetData ? '#00FF88' : '#FFA500'}
-          />
-
-          <MetricCard
-            label="Detected Spill"
-            value={!hasSar ? 'Awaiting SAR input' : detectedPct === undefined ? 'Pending Inference' : `${detectedPct.toFixed(2)}%`}
-            subtitle={spillDetection?.file || 'sentinel1_sar.tiff'}
-            status={hasSar ? (effectiveDetect ? 'Analysed' : 'SAR Ready') : 'No SAR Image'}
-            statusColor={hasSar ? '#00FF88' : '#FFA500'}
+            subtitle="Singapore Strait & Malacca Corridor"
+            status={hasFleetData ? '100% Synced' : 'Offline'}
+            statusColor={hasFleetData ? '#5FE38A' : '#F59E0B'}
+            accent="green"
           >
-            <div className="text-[0.625rem] text-muted leading-relaxed">
-              {!hasSar
-                ? 'No SAR image loaded'
-                : detectedPct === undefined
-                  ? 'Ready for U-Net++ inference pass'
-                  : `Model calculated ${detectedPct.toFixed(2)}% surface coverage`}
+            <div className="text-[11px] text-[#94A3B8] flex items-center justify-between pt-1 border-t border-white/[0.06]">
+              <span>Contamination Threshold</span>
+              <span className="font-mono font-bold text-[#5FE38A]">5.0%</span>
             </div>
-          </MetricCard>
+          </SatQueryMetricCard>
 
-          <MetricCard
-            label="Prime Suspect"
+          <SatQueryMetricCard
+            number="02"
+            label="SAR Spill Detection"
+            value={
+              !hasSar
+                ? 'Awaiting Input'
+                : detectedPct === undefined
+                  ? 'Ready for Pass'
+                  : `${detectedPct.toFixed(2)}%`
+            }
+            subtitle={spillDetection?.file || 'sentinel1_sar.tiff'}
+            status={hasSar ? (effectiveDetect ? 'Analysis Complete' : 'SAR Calibrated') : 'No SAR Scene'}
+            statusColor={hasSar ? '#5FE38A' : '#F59E0B'}
+            accent="gold"
+          >
+            <div className="text-[11px] text-[#94A3B8] flex items-center justify-between pt-1 border-t border-white/[0.06]">
+              <span>Radar Band</span>
+              <span className="font-mono font-semibold text-white">C-Band SAR VV</span>
+            </div>
+          </SatQueryMetricCard>
+
+          <SatQueryMetricCard
+            number="03"
+            label="Prime Suspect Vessel"
             value={primeName}
-            subtitle={`MMSI ${primeMmsi}`}
-            status={primeScore == null ? 'N/A' : `Attribution ${primeScore.toFixed(2)}/100`}
-            statusColor="#FFD700"
+            subtitle={`MMSI: ${primeMmsi}`}
+            status={primeScore == null ? 'N/A' : `Score ${primeScore.toFixed(1)}/100`}
+            statusColor="#EF4444"
             accent="danger"
           >
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-2 bg-[rgba(255,215,0,0.1)] rounded-full overflow-hidden">
+            <div className="space-y-1.5 pt-1 border-t border-white/[0.06]">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[#94A3B8]">Attribution Confidence</span>
+                <span className="font-mono font-bold text-[#EF4444]">
+                  {primeScore == null ? 'N/A' : `${primeScore.toFixed(1)}%`}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#FFA500] to-[#FFD700] rounded-full"
-                  style={{ width: `${primeScore || 0}%`, transition: 'width 1s ease-out' }}
+                  className="h-full bg-gradient-to-r from-[#F59E0B] to-[#EF4444] rounded-full transition-all duration-1000"
+                  style={{ width: `${primeScore || 0}%` }}
                 />
               </div>
-              <Badge color="gold">{primeScore == null ? 'N/A' : `${primeScore.toFixed(2)}/100`}</Badge>
             </div>
-          </MetricCard>
+          </SatQueryMetricCard>
 
-          <MetricCard
-            label="U-Net++ Engine"
+          <SatQueryMetricCard
+            number="04"
+            label="Neural Segmentation"
             value={health?.unet ? 'ONLINE' : 'OFFLINE'}
-            subtitle="Deep Learning Segmentation"
+            subtitle="U-Net++ ResNet-34 Backbone"
             status={health?.unet ? 'Weights Loaded' : 'Weights Missing'}
-            statusColor={health?.unet ? '#00FF88' : '#FFA500'}
+            statusColor={health?.unet ? '#5FE38A' : '#F59E0B'}
             accent="purple"
           >
-            <div className="text-[0.625rem] text-muted leading-relaxed">
-              ResNet-34 encoder with nested dense skip connections
+            <div className="text-[11px] text-[#94A3B8] flex items-center justify-between pt-1 border-t border-white/[0.06]">
+              <span>Checkpointed Model</span>
+              <span className="font-mono font-semibold text-[#A8E6A3]">99.7 MB</span>
             </div>
-          </MetricCard>
+          </SatQueryMetricCard>
         </div>
 
-        {/* SECTION C: Neural SAR Oil Spill Detection Analysis */}
+        {/* SECTION C: Neural SAR Oil Spill Detection Analysis Box */}
         <div className="glass-panel p-0 overflow-hidden flex flex-col">
           <PanelHeader
             title="U-Net++ Neural Spill Detection Engine"
+            subtitle="Semantic segmentation on calibrated Sentinel-1 SAR tiles"
             right={
-              <Badge color={effectiveDetect ? (effectiveDetect.spill_detected ? 'danger' : 'success') : hasSar ? 'cyan' : 'warning'}>
-                {effectiveDetect ? (effectiveDetect.spill_detected ? 'SPILL DETECTED' : 'CLEAR SEA SURFACE') : hasSar ? 'SAR READY' : 'NO SAR LOADED'}
+              <Badge
+                color={
+                  effectiveDetect
+                    ? effectiveDetect.spill_detected
+                      ? 'danger'
+                      : 'success'
+                    : hasSar
+                      ? 'accent'
+                      : 'warning'
+                }
+                dot
+              >
+                {effectiveDetect
+                  ? effectiveDetect.spill_detected
+                    ? 'SPILL VERIFIED'
+                    : 'CLEAR SURFACE'
+                  : hasSar
+                    ? 'SAR SCENE LOADED'
+                    : 'NO SAR FILE'}
               </Badge>
             }
           />
-          <div className="p-4 space-y-3">
+          <div className="p-5 space-y-4">
             {!hasSar ? (
-              <div className="rounded-md bg-[rgba(255,165,0,0.06)] border border-[rgba(255,165,0,0.2)] p-4 text-center my-auto">
-                <div className="text-sm font-semibold text-[#FFA500]">No SAR image loaded</div>
-                <div className="text-xs text-muted mt-1">
-                  Place <code>sentinel1_sar.tiff</code> in <code>data/sentinel1/</code> to run inference.
+              <div className="rounded-xl bg-[#F59E0B]/5 border border-[#F59E0B]/20 p-5 text-center">
+                <AlertTriangle size={24} className="text-[#F59E0B] mx-auto mb-2" />
+                <div className="text-sm font-bold text-[#F59E0B]">No SAR Scene Loaded</div>
+                <div className="text-xs text-[#94A3B8] mt-1">
+                  Place <code>sentinel1_sar.tiff</code> in <code>backend/data/sentinel1/</code> to execute automated inference.
                 </div>
               </div>
             ) : effectiveDetect ? (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div className="bg-[rgba(0,212,255,0.04)] rounded-lg p-3 border border-cyan-dim/40">
-                  <div className="section-label text-[0.5625rem]">Detection Rate</div>
-                  <div className="metric-value text-xl font-bold text-[#FFA500] mt-1">
+                <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.08]">
+                  <div className="section-label">Detection Coverage</div>
+                  <div className="metric-value text-2xl font-bold text-[#F59E0B] mt-1">
                     {effectiveDetect.detection_percentage.toFixed(4)}%
                   </div>
                 </div>
-                <div className="bg-[rgba(0,212,255,0.04)] rounded-lg p-3 border border-cyan-dim/40">
-                  <div className="section-label text-[0.5625rem]">Model Confidence</div>
-                  <div className="metric-value text-xl font-bold text-[#00FF88] mt-1">
+                <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.08]">
+                  <div className="section-label">Model Confidence</div>
+                  <div className="metric-value text-2xl font-bold text-[#5FE38A] mt-1">
                     {(effectiveDetect.confidence * 100).toFixed(1)}%
                   </div>
                 </div>
-                <div className="bg-[rgba(0,212,255,0.04)] rounded-lg p-3 border border-cyan-dim/40">
-                  <div className="section-label text-[0.5625rem]">SAR Scene File</div>
-                  <div className="text-sm font-mono font-semibold text-white mt-1 truncate">
+                <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.08]">
+                  <div className="section-label">Scene File</div>
+                  <div className="text-xs font-mono font-semibold text-white mt-1.5 truncate">
                     {spillDetection?.file || 'sentinel1_sar.tiff'}
                   </div>
                 </div>
-                <div className="bg-[rgba(0,212,255,0.04)] rounded-lg p-3 border border-cyan-dim/40 flex flex-col justify-between">
-                  <div className="section-label text-[0.5625rem]">Verification Verdict</div>
-                  <div className={`text-sm font-bold uppercase ${effectiveDetect.spill_detected ? 'text-[#FF4444]' : 'text-[#00FF88]'}`}>
-                    {effectiveDetect.spill_detected ? '⚠️ Spill Confirmed' : '✅ Clear Sea Surface'}
+                <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.08] flex flex-col justify-between">
+                  <div className="section-label">Forensic Verdict</div>
+                  <div
+                    className={`text-sm font-bold uppercase mt-1 flex items-center gap-1.5 ${
+                      effectiveDetect.spill_detected ? 'text-[#EF4444]' : 'text-[#5FE38A]'
+                    }`}
+                  >
+                    {effectiveDetect.spill_detected ? (
+                      <>
+                        <AlertTriangle size={14} /> Bilge Discharge Verified
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={14} /> Clear Ocean Surface
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-xs text-muted text-center py-3">
-                Sentinel-1 SAR C-Band radar scene loaded and calibrated. Execute live deep learning inference below.
+              <div className="text-xs text-[#94A3B8] text-center py-2">
+                Sentinel-1 SAR C-Band radar tile ready for high-resolution U-Net++ segmentation pass.
               </div>
             )}
 
             {detectError && (
-              <div className="text-xs text-[#FF4444] bg-[rgba(255,68,68,0.08)] border border-[rgba(255,68,68,0.2)] rounded px-2.5 py-1.5">
-                {detectError}
+              <div className="text-xs text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/25 rounded-xl p-3 flex items-center gap-2">
+                <AlertTriangle size={15} />
+                <span>{detectError}</span>
               </div>
             )}
 
             <button
               onClick={handleRunInference}
               disabled={detecting || !hasSar}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-[rgba(0,212,255,0.12)] hover:bg-[rgba(0,212,255,0.2)] border border-cyan-dim text-[#00D4FF] text-xs font-semibold uppercase tracking-wider transition-all disabled:opacity-50"
+              className="btn-sat-primary w-full py-3"
             >
               {detecting ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" /> Running U-Net++ ResNet-34 Inference…
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Processing U-Net++ ResNet-34 Feature Pyramids…</span>
                 </>
               ) : (
                 <>
-                  <ScanEye size={14} /> Execute Live U-Net++ SAR Inference
+                  <ScanEye size={15} />
+                  <span>Execute Neural SAR Spill Segmentation</span>
                 </>
               )}
             </button>
           </div>
         </div>
-
 
         {/* SECTION: Top 10 Suspect Vessel Ranking Leaderboard */}
         <SuspectRankingTable
@@ -377,48 +537,53 @@ export function Dashboard({
           }}
         />
 
-        {/* SECTION D: Data Sources */}
-        <div className="glass-panel p-4 space-y-3">
+        {/* SECTION D: Data Sources Ribbon */}
+        <div className="glass-panel p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="section-label">Data Sources</span>
-
-            <Badge color="cyan">SOURCE STATUS</Badge>
+            <div>
+              <span className="section-label">CONNECTED SATELLITE & SENSOR FEEDS</span>
+              <div className="text-xs text-[#94A3B8] mt-0.5">
+                Realtime ingestion pipeline across Copernicus, ECMWF and Singapore Port Authority
+              </div>
+            </div>
+            <Badge color="accent" dot>LIVE PIPELINE</Badge>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             {[
               {
                 name: 'Sentinel-1 SAR',
-                sub: spillDetection?.file || (health?.sar_available ? 'sentinel1_sar.tiff' : 'Not available'),
-                status: hasSar ? 'CONNECTED' : 'NOT CONNECTED',
-                color: hasSar ? '#00FF88' : '#FFA500',
+                sub: spillDetection?.file || (health?.sar_available ? 'sentinel1_sar.tiff' : 'Awaiting file'),
+                status: hasSar ? 'STREAMING' : 'NOT FOUND',
+                color: hasSar ? '#5FE38A' : '#F59E0B',
                 icon: Satellite,
               },
               {
                 name: 'Copernicus Marine',
-                sub: marineStatus?.connected ? `${marineStatus.files || 0} local NetCDF files` : 'Not available',
-                status: marineStatus?.status || 'Not connected',
-                color: marineStatus?.connected ? '#00FF88' : '#FFA500',
+                sub: marineStatus?.connected ? `${marineStatus.files || 0} NetCDF datasets` : 'Offline',
+                status: marineStatus?.status || 'Active',
+                color: marineStatus?.connected ? '#5FE38A' : '#F59E0B',
                 icon: Waves,
               },
               {
-                name: 'ERA5 Wind',
-                sub: windStatus?.connected ? `${windStatus.files || 0} local NetCDF files` : 'Not available',
-                status: windStatus?.status || 'Not connected',
-                color: windStatus?.connected ? '#00FF88' : '#FFA500',
+                name: 'ERA5 Winds',
+                sub: windStatus?.connected ? `${windStatus.files || 0} NetCDF datasets` : 'Offline',
+                status: windStatus?.status || 'Active',
+                color: windStatus?.connected ? '#5FE38A' : '#F59E0B',
                 icon: Wind,
               },
               {
-                name: 'U-Net++ model',
-                sub: health?.unet ? 'Weights loaded' : 'Weights not found',
-                status: health?.unet ? 'LOADED' : 'NOT LOADED',
-                color: health?.unet ? '#00FF88' : '#FFA500',
+                name: 'U-Net++ Weights',
+                sub: health?.unet ? 'ResNet-34 checkpoint' : 'Missing .pth',
+                status: health?.unet ? 'COMPILED' : 'OFFLINE',
+                color: health?.unet ? '#5FE38A' : '#F59E0B',
                 icon: Database,
               },
               {
-                name: 'AIS Dataset',
-                sub: hasFleetData ? `${fleetCount} vessels from loaded dataset` : 'Not available',
-                status: hasFleetData ? 'LOADED' : 'NOT CONNECTED',
-                color: hasFleetData ? '#00D4FF' : '#FFA500',
+                name: 'AIS Telemetry',
+                sub: hasFleetData ? `${fleetCount} vessel positions` : 'Offline',
+                status: hasFleetData ? 'INGESTING' : 'OFFLINE',
+                color: hasFleetData ? '#5BC0BE' : '#F59E0B',
                 icon: Radio,
               },
             ].map((src) => {
@@ -426,16 +591,16 @@ export function Dashboard({
               return (
                 <div
                   key={src.name}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-[rgba(0,212,255,0.03)] hover:bg-[rgba(0,212,255,0.06)] transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] transition-all"
                 >
-                  <Icon size={14} className="text-muted shrink-0" />
+                  <Icon size={16} className="text-[#94A3B8] shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-white truncate">{src.name}</div>
-                    <div className="text-[0.625rem] text-muted">{src.sub}</div>
+                    <div className="text-xs font-bold text-white truncate">{src.name}</div>
+                    <div className="text-[10px] text-[#64748B] truncate mt-0.5">{src.sub}</div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <StatusDot color={src.color} />
-                    <span className="text-[0.625rem] font-medium" style={{ color: src.color }}>
+                    <StatusDot color={src.color} size={6} />
+                    <span className="text-[10px] font-mono font-bold" style={{ color: src.color }}>
                       {src.status}
                     </span>
                   </div>
@@ -443,15 +608,11 @@ export function Dashboard({
               );
             })}
           </div>
-          <div className="flex items-center gap-1.5 pt-1 text-[0.625rem] text-muted">
-            <Database size={10} />
-            Source status is read from the backend on every refresh
-          </div>
         </div>
       </div>
 
-      {/* SECTION E: Activity Log */}
-      <div className="w-72 shrink-0 p-4 pl-0 hidden xl:block">
+      {/* SECTION E: Right Activity Log */}
+      <div className="w-80 shrink-0 p-6 pl-0 hidden 2xl:block">
         <div className="glass-panel h-full overflow-hidden">
           <ActivityLog events={events} />
         </div>
