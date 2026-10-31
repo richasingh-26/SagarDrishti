@@ -72,9 +72,8 @@ function App() {
         active={page}
         onNavigate={setPage}
         anomalyCount={anomalyCount}
-        onOpenLanding={() => setInLanding(true)}
       />
-      <main className="flex-1 ml-60 mt-16 overflow-hidden">
+      <main className="flex-1 ml-48 mt-14 overflow-hidden">
         <ErrorBoundary fallbackTitle={`Recovered view: ${page}`}>
           <div key={page} className="h-full animate-fade-in">
             {page === 'dashboard' && (

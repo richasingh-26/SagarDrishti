@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, Radio, Brain, Zap, Globe, Shield, User } from 'lucide-react';
+import { Activity, Radio, Brain, Zap, Anchor } from 'lucide-react';
 import { StatusDot } from './StatusDot';
 import type { PageId } from './Sidebar';
 
@@ -36,119 +36,66 @@ export function CommandBar({
     return () => clearInterval(id);
   }, []);
 
-
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[#060B10]/80 backdrop-blur-xl border-b border-white/[0.08] flex items-center justify-between px-6 gap-4">
-      {/* Brand Lockup (Exact SatQuery Style) */}
-      <div className="flex items-center gap-6 shrink-0">
-        <button
-          onClick={onOpenLanding}
-          className="flex items-center gap-2.5 group text-left transition-transform hover:scale-[1.02]"
-          title="Return to 3D Earth Mission Portal"
-        >
-          {/* Orbital Orbit Ring Logo */}
-          <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
-            <svg width="30" height="30" viewBox="0 0 28 28" fill="none">
-              <circle
-                cx="14"
-                cy="14"
-                r="11"
-                stroke="#5FE38A"
-                strokeWidth="1.8"
-                strokeDasharray="44 12"
-                className="opacity-90 transition-transform group-hover:rotate-45"
-              />
-              <circle cx="14" cy="14" r="5" fill="#5FE38A" className="shadow-glow" />
-              <ellipse
-                cx="14"
-                cy="14"
-                rx="13"
-                ry="5"
-                stroke="#5FE38A"
-                strokeWidth="1.2"
-                transform="rotate(-25 14 14)"
-                strokeDasharray="28 8"
-                opacity="0.8"
-              />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[17px] font-extrabold tracking-tight text-white leading-tight">
-              Sagar<span className="text-[#5FE38A]">Drishti</span>
-            </div>
-            <div className="text-[8px] font-bold tracking-[0.2em] text-[#94A3B8] uppercase">
-              MARITIME INTELLIGENCE
-            </div>
-          </div>
-        </button>
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-[#0A1018] border-b border-white/[0.08] flex items-center justify-between px-5 gap-3">
+      {/* Brand */}
+      <button
+        onClick={onOpenLanding}
+        className="flex items-center gap-2 shrink-0 group"
+        title="Return to 3D Earth"
+      >
+        <Anchor size={18} className="text-[#5BC0BE]" />
+        <span className="text-[15px] font-bold text-white tracking-tight">
+          Sagar<span className="text-[#5BC0BE]">Drishti</span>
+        </span>
+        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#5BC0BE]/15 text-[#5BC0BE] border border-[#5BC0BE]/30 ml-0.5">
+          SIH 2026
+        </span>
+      </button>
 
-
-      </div>
-
-      {/* Center: SatQuery Status Dot Ribbon */}
-      <div className="hidden md:flex items-center gap-4 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08]">
-        <div className="flex items-center gap-2 text-xs">
-          <StatusDot color={sarAvailable ? '#5FE38A' : '#F59E0B'} size={7} />
-          <span className="text-[11px] text-[#94A3B8]">Sentinel-1</span>
-          <span
-            className={`text-[11px] font-semibold ${
-              sarAvailable ? 'text-[#5FE38A]' : 'text-[#F59E0B]'
-            }`}
-          >
-            {sarAvailable ? 'ONLINE' : 'PENDING'}
+      {/* Center Status Indicators */}
+      <div className="hidden md:flex items-center gap-5 text-[11px]">
+        <div className="flex items-center gap-1.5">
+          <StatusDot color={sarAvailable ? '#5FE38A' : '#F59E0B'} size={6} />
+          <span className="text-[#94A3B8]">SENTINEL-1</span>
+          <span className={`font-semibold ${sarAvailable ? 'text-[#5FE38A]' : 'text-[#F59E0B]'}`}>
+            {sarAvailable ? 'AVAILABLE' : 'PENDING'}
           </span>
         </div>
-        <div className="w-px h-3.5 bg-white/10" />
-        <div className="flex items-center gap-2 text-xs">
-          <Radio size={12} className="text-[#5BC0BE]" />
-          <span className="text-[11px] text-[#94A3B8]">AIS Fleet</span>
-          <span className="text-[11px] font-semibold text-white">
+        <div className="flex items-center gap-1.5">
+          <Radio size={11} className="text-[#5BC0BE]" />
+          <span className="text-[#94A3B8]">AIS FEED</span>
+          <span className="font-semibold text-white">
             {online ? `${totalVessels.toLocaleString()} ships` : 'OFFLINE'}
           </span>
         </div>
-        <div className="w-px h-3.5 bg-white/10" />
-        <div className="flex items-center gap-2 text-xs">
-          <Brain size={12} className={unetLoaded ? 'text-[#A8E6A3]' : 'text-[#F59E0B]'} />
-          <span className="text-[11px] text-[#94A3B8]">U-Net++</span>
-          <span
-            className={`text-[11px] font-semibold ${
-              unetLoaded ? 'text-[#5FE38A]' : 'text-[#F59E0B]'
-            }`}
-          >
+        <div className="flex items-center gap-1.5">
+          <Brain size={11} className={unetLoaded ? 'text-[#5FE38A]' : 'text-[#F59E0B]'} />
+          <span className="text-[#94A3B8]">U-NET++</span>
+          <span className={`font-semibold ${unetLoaded ? 'text-[#5FE38A]' : 'text-[#F59E0B]'}`}>
             {unetLoaded ? 'LOADED' : 'OFFLINE'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Zap size={11} className={online ? 'text-[#5FE38A]' : 'text-[#F59E0B]'} />
+          <span className="text-[#94A3B8]">BACKEND</span>
+          <span className={`font-semibold ${online ? 'text-[#5FE38A]' : 'text-[#EF4444]'}`}>
+            {online ? 'ONLINE' : 'OFFLINE'}
           </span>
         </div>
       </div>
 
-      {/* Right Actions */}
+      {/* Right: Clock + CTA */}
       <div className="flex items-center gap-3 shrink-0">
-        <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
+        <div className="hidden sm:flex items-center gap-1.5 text-[11px]">
           <Activity size={11} className="text-[#5FE38A]" />
-          <span className="font-mono text-[11px] text-[#94A3B8]">{clock}</span>
+          <span className="font-mono text-[#94A3B8]">{clock}</span>
         </div>
-
-        {onOpenLanding && (
-          <button
-            onClick={onOpenLanding}
-            className="btn-sat-ghost text-xs flex items-center gap-1.5 border border-[#5FE38A]/30 bg-[#5FE38A]/10 hover:bg-[#5FE38A]/20 transition-all"
-            title="3D Earth Satellite View"
-          >
-            <Globe size={13} className="text-[#5FE38A]" />
-            <span>3D Earth</span>
-          </button>
-        )}
-
-        <button onClick={onInvestigate} className="btn-sat-primary">
-          <Shield size={14} />
-          <span>Full Forensic Pass</span>
-        </button>
-
-        {/* SatQuery User Profile Circle */}
         <button
-          className="w-9 h-9 rounded-full bg-white/[0.04] hover:bg-[#5FE38A]/10 border border-white/[0.15] hover:border-[#5FE38A] text-[#CBD5E1] hover:text-[#5FE38A] flex items-center justify-center transition-all cursor-pointer"
-          title="Security Clearance: Level 4"
+          onClick={onInvestigate}
+          className="px-4 py-1.5 rounded text-xs font-bold bg-[#0D7377] hover:bg-[#0F8E92] text-white border border-[#5BC0BE]/40 transition-all"
         >
-          <User size={16} />
+          RUN FULL INVESTIGATION
         </button>
       </div>
     </header>

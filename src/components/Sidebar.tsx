@@ -5,8 +5,6 @@ import {
   FlaskConical,
   TrendingUp,
   SlidersHorizontal,
-  Compass,
-  Globe,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -24,7 +22,6 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   badge?: number;
-  goldStar?: boolean;
   isNew?: boolean;
 }
 
@@ -36,62 +33,45 @@ interface SidebarProps {
   onOpenLanding?: () => void;
 }
 
-export function Sidebar({ active, onNavigate, anomalyCount, onOpenLanding }: SidebarProps) {
+export function Sidebar({ active, onNavigate, anomalyCount }: SidebarProps) {
   const items: NavItem[] = [
-    { id: 'dashboard', label: 'Command Center', icon: LayoutDashboard },
-    { id: 'vessels', label: 'AIS Fleet Track', icon: Ship, badge: anomalyCount },
-    { id: 'spill-detection', label: 'SAR AI Analysis', icon: ScanEye },
-    { id: 'fleet-builder', label: 'Custom Ship Studio', icon: SlidersHorizontal, isNew: true },
-    { id: 'scenario-builder', label: 'Drift Simulator', icon: FlaskConical },
-    { id: 'prediction', label: 'Spill Forecast', icon: TrendingUp },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'fleet-builder', label: 'Custom Ship ...', icon: SlidersHorizontal, isNew: true },
+    { id: 'vessels', label: 'Vessel Intellige...', icon: Ship, badge: anomalyCount },
+    { id: 'spill-detection', label: 'Spill Detection (SAR)', icon: ScanEye },
+    { id: 'scenario-builder', label: 'Scenario Builder', icon: FlaskConical },
+    { id: 'prediction', label: 'Future Prediction', icon: TrendingUp },
   ];
 
   return (
-    <nav className="fixed left-0 top-16 bottom-0 w-60 bg-[#060B10]/85 backdrop-blur-xl border-r border-white/[0.08] flex flex-col py-4 z-40">
-      <div className="px-4 mb-3 flex items-center justify-between">
-        <span className="section-label">MISSION VIEWS</span>
-        <span className="text-[10px] text-[#5FE38A] font-mono font-semibold">LIVE</span>
+    <nav className="fixed left-0 top-14 bottom-0 w-48 bg-[#0A1018] border-r border-white/[0.08] flex flex-col py-4 z-40">
+      <div className="px-4 mb-3">
+        <span className="text-[10px] font-bold tracking-[0.15em] text-[#64748B] uppercase">
+          NAVIGATION
+        </span>
       </div>
 
-      {onOpenLanding && (
-        <div className="px-3 mb-2">
-          <button
-            onClick={onOpenLanding}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#5FE38A] bg-[#5FE38A]/10 border border-[#5FE38A]/30 hover:bg-[#5FE38A]/20 transition-all shadow-[0_0_15px_rgba(95,227,138,0.15)] group cursor-pointer"
-            title="Switch to 3D Earth Globe Portal"
-          >
-            <Globe size={15} className="group-hover:rotate-45 transition-transform shrink-0" />
-            <span className="truncate">3D Earth Globe</span>
-          </button>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto px-3 space-y-1">
+      <div className="flex-1 overflow-y-auto space-y-0.5">
         {items.map((item) => {
-          const Icon = item.icon;
           const isActive = active === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold text-left transition-all ${
+              className={`w-full flex items-center gap-2 px-4 py-2.5 text-[13px] text-left transition-all border-l-2 ${
                 isActive
-                  ? 'bg-[#5FE38A]/10 text-white border border-[#5FE38A]/40 shadow-[0_0_20px_rgba(95,227,138,0.15)]'
-                  : 'text-[#94A3B8] hover:text-white hover:bg-white/[0.04] border border-transparent'
+                  ? 'border-l-[#5BC0BE] bg-[#5BC0BE]/8 text-white font-semibold'
+                  : 'border-l-transparent text-[#94A3B8] hover:text-white hover:bg-white/[0.03]'
               }`}
             >
-              <Icon
-                size={17}
-                className={isActive ? 'text-[#5FE38A]' : 'text-[#64748B]'}
-              />
               <span className="flex-1 truncate">{item.label}</span>
               {item.isNew && (
-                <span className="px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold bg-[#D8B4FE]/15 text-[#D8B4FE] border border-[#D8B4FE]/30">
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#5BC0BE]/15 text-[#5BC0BE]">
                   NEW
                 </span>
               )}
               {item.badge !== undefined && item.badge > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[0.625rem] font-bold bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30">
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#EF4444]/15 text-[#EF4444]">
                   {item.badge}
                 </span>
               )}
@@ -100,18 +80,13 @@ export function Sidebar({ active, onNavigate, anomalyCount, onOpenLanding }: Sid
         })}
       </div>
 
-      {/* Case Footer Card (SatQuery Info Card style) */}
-      <div className="mx-3 p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-1.5">
-        <div className="flex items-center justify-between">
-          <span className="section-label">ACTIVE AREA</span>
-          <Compass size={12} className="text-[#5FE38A]" />
-        </div>
-        <div className="font-bold text-[13px] text-white">Singapore Strait TSS</div>
-        <div className="text-[11px] text-[#94A3B8] font-mono">Case #SAG-2026-001</div>
-        <div className="pt-1 flex items-center gap-1.5 text-[10px] text-[#5FE38A]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#5FE38A] animate-ping" />
-          <span>Continuous Watch Active</span>
-        </div>
+      {/* Case Footer */}
+      <div className="mx-3 mt-auto pt-3 border-t border-white/[0.06] space-y-1">
+        <span className="text-[10px] font-bold tracking-[0.15em] text-[#64748B] uppercase">
+          CASE
+        </span>
+        <div className="font-bold text-[12px] text-[#5BC0BE] font-mono">#SAG-2026-001</div>
+        <div className="text-[11px] text-[#94A3B8]">Singapore Strait</div>
       </div>
     </nav>
   );
