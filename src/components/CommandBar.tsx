@@ -52,7 +52,7 @@ export function CommandBar({
         <button
           onClick={onOpenLanding}
           className="flex items-center gap-2.5 group text-left transition-transform hover:scale-[1.02]"
-          title="Return to 3D Earth Mission Portal"
+          title="SagarDrishti Maritime Command Center"
         >
           {/* Orbital Orbit Ring Logo */}
           <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
@@ -151,16 +151,6 @@ export function CommandBar({
           <span className="font-mono text-[11px] text-[#94A3B8]">{clock}</span>
         </div>
 
-        {onOpenLanding && (
-          <button
-            onClick={onOpenLanding}
-            className="btn-sat-ghost text-xs hidden sm:inline-flex"
-            title="3D Earth Satellite View"
-          >
-            <Globe size={13} className="text-[#5FE38A]" />
-            <span>3D Earth</span>
-          </button>
-        )}
 
         <button onClick={onInvestigate} className="btn-sat-primary">
           <Shield size={14} />

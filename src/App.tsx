@@ -14,7 +14,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import type { Vessel } from '@/lib/api';
 
 function App() {
-  const [inLanding, setInLanding] = useState(true);
+  const [inLanding, setInLanding] = useState(false);
   const [page, setPage] = useState<PageId>('dashboard');
   const {
     online,
