@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const DEFAULT_API_BASE = 'http://127.0.0.1:8001';
+export const DEFAULT_API_BASE = 'http://127.0.0.1:8000';
 export const API_BASE = DEFAULT_API_BASE;
 
 let activeBaseUrl: string | null = null;

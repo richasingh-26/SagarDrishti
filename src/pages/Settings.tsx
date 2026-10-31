@@ -64,7 +64,7 @@ export function SettingsPage({ online }: SettingsProps) {
                       type="text"
                       value={apiUrl}
                       onChange={(e) => setApiUrl(e.target.value)}
-                      placeholder="http://127.0.0.1:8001"
+                      placeholder="http://127.0.0.1:8000"
                       className="flex-1 px-3 py-1.5 rounded-md bg-[rgba(10,22,40,0.8)] border border-cyan-dim text-xs text-white focus:border-[#00D4FF] outline-none"
                     />
                     <button
@@ -80,7 +80,7 @@ export function SettingsPage({ online }: SettingsProps) {
                     <div className="text-[0.6875rem] text-[#00D4FF] pt-1">{testResult}</div>
                   )}
                   <div className="text-[0.625rem] text-muted">
-                    Tip: Default local backend URL is <code className="text-white">http://127.0.0.1:8001</code>.
+                    Tip: Default local backend URL is <code className="text-white">http://127.0.0.1:8000</code>.
                   </div>
                 </div>
 

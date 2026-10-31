@@ -72,7 +72,7 @@ export function SpillDetection() {
           body: formData,
         });
       } catch {
-        response = await fetch('http://127.0.0.1:8001/api/gemma-analyze', {
+        response = await fetch('http://127.0.0.1:8000/api/gemma-analyze', {
           method: 'POST',
           body: formData,
         });
