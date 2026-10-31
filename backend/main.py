@@ -837,6 +837,210 @@ def reset_data():
     return {"status": "success", "message": "Reset to complete AIS dataset", "total": len(vessels)}
 
 # ============================================================
+# ORIGIN RECONSTRUCTION ENDPOINT
+# ============================================================
+
+class OriginReconstructionRequest(BaseModel):
+    slick_lat: float = 1.25
+    slick_lon: float = 103.80
+    backtrack_hours: int = 8
+    wind_speed_knots: float = 12.0
+    wind_direction_deg: float = 220.0
+    current_speed_knots: float = 1.2
+    current_direction_deg: float = 135.0
+    spill_volume_m3: float = 450.0
+
+@app.post("/api/origin-reconstruction")
+def origin_reconstruction(req: OriginReconstructionRequest):
+    """
+    Backtrack an oil slick from observed position to estimated origin.
+    Uses physics-based reverse drift (wind + ocean current) and ranks
+    candidate vessels from AIS data.
+    """
+    # --- Reverse drift: walk backwards in time ---
+    lat = req.slick_lat
+    lon = req.slick_lon
+    wind_rad = math.radians((req.wind_direction_deg + 180) % 360)  # reverse direction
+    curr_rad = math.radians((req.current_direction_deg + 180) % 360)
+
+    # Net drift per hour (knots -> deg/hr, approx 1 deg lat ≈ 111 km, 1 deg lon ≈ 111*cos(lat) km)
+    cos_lat = math.cos(math.radians(lat))
+    wind_u_kn = req.wind_speed_knots * 0.03 * math.sin(wind_rad)   # 3% windage
+    wind_v_kn = req.wind_speed_knots * 0.03 * math.cos(wind_rad)
+    curr_u_kn = req.current_speed_knots * math.sin(curr_rad)
+    curr_v_kn = req.current_speed_knots * math.cos(curr_rad)
+
+    net_u_kn = wind_u_kn + curr_u_kn   # east-west knots
+    net_v_kn = wind_v_kn + curr_v_kn   # north-south knots
+
+    # Build backtrack trajectory
+    trajectory = [{"lat": round(lat, 6), "lon": round(lon, 6)}]
+    for h in range(req.backtrack_hours):
+        lat += (net_v_kn / 60.0) / 111.0       # knots*hr -> degrees lat
+        lon += (net_u_kn / 60.0) / (111.0 * max(cos_lat, 0.01))
+        trajectory.append({"lat": round(lat, 6), "lon": round(lon, 6)})
+
+    origin_lat = lat
+    origin_lon = lon
+
+    # Origin radius scales with drift uncertainty (grows with time and wind speed)
+    origin_radius_km = round(0.3 + 0.15 * req.backtrack_hours + 0.02 * req.wind_speed_knots, 2)
+
+    # --- Confidence based on backtrack hours (shorter = more certain) ---
+    confidence_pct = round(max(30.0, 95.0 - req.backtrack_hours * 3.5 - req.wind_speed_knots * 0.4), 1)
+
+    # --- Discharge window estimate ---
+    now = __import__('datetime').datetime.utcnow()
+    origin_time = now - __import__('datetime').timedelta(hours=req.backtrack_hours)
+    discharge_window = f"{origin_time.strftime('%Y-%m-%dT%H:%M')}Z – T+{req.backtrack_hours}h"
+
+    # --- Find candidate vessels near origin zone ---
+    vessels = load_all_vessels()
+    candidates = []
+    for v in vessels:
+        v_lat = v.get("lat", 0)
+        v_lon = v.get("lon", 0)
+        dist_km = math.hypot(
+            (v_lat - origin_lat) * 111.0,
+            (v_lon - origin_lon) * 111.0 * cos_lat
+        )
+        if dist_km <= origin_radius_km + 20.0:   # within origin zone + buffer
+            candidates.append({**v, "_dist_km": dist_km})
+
+    # Sort by distance, take top 10
+    candidates.sort(key=lambda x: x["_dist_km"])
+    candidate_vessels = []
+    for c in candidates[:10]:
+        candidate_vessels.append({
+            "mmsi": c.get("mmsi", ""),
+            "name": c.get("name", "Unknown"),
+            "lat": c.get("lat", 0),
+            "lon": c.get("lon", 0),
+            "speed": c.get("speed", 0),
+            "heading": c.get("heading", 0),
+            "type": c.get("type", "Unknown"),
+            "flag": c.get("flag", ""),
+            "anomaly_score": c.get("anomaly_score", 0),
+            "is_anomaly": c.get("is_anomaly", False),
+            "status": c.get("status", ""),
+        })
+
+    # --- Get prime suspect from existing ranking endpoint ---
+    prime_suspect_data = None
+    try:
+        ranking = compute_top_suspect_ranking(
+            vessels_data=vessels,
+            slick_lat=req.slick_lat,
+            slick_lon=req.slick_lon,
+            wind_spd=req.wind_speed_knots,
+            wind_dir=req.wind_direction_deg,
+            curr_spd=req.current_speed_knots,
+            curr_dir=req.current_direction_deg,
+            hours=req.backtrack_hours,
+            limit=1,
+        )
+        if ranking.get("top_suspects"):
+            p = ranking["top_suspects"][0]
+            prime_suspect_data = {
+                "name": p["name"],
+                "mmsi": p["mmsi"],
+                "lat": p["lat"],
+                "lon": p["lon"],
+                "speed": p["speed"],
+                "type": p.get("type", "Unknown"),
+                "attribution_score": p["attribution_score"],
+                "confidence_pct": p.get("confidence_pct"),
+                "risk_level": p.get("risk_level", "HIGH"),
+                "reason": (p.get("suspect_evidence") or ["Spatial corridor intersection"])[0],
+            }
+    except Exception:
+        pass
+
+    return {
+        "slick_lat": req.slick_lat,
+        "slick_lon": req.slick_lon,
+        "origin_lat": round(origin_lat, 6),
+        "origin_lon": round(origin_lon, 6),
+        "origin_radius_km": origin_radius_km,
+        "backtrack_hours": req.backtrack_hours,
+        "estimated_time": origin_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "discharge_window": discharge_window,
+        "confidence_pct": confidence_pct,
+        "backtrack_trajectory": trajectory,
+        "candidate_vessels": candidate_vessels,
+        "prime_suspect": prime_suspect_data,
+    }
+
+
+# ============================================================
+# VESSEL DATASET UPLOAD ENDPOINT
+# ============================================================
+
+@app.post("/api/vessels/upload")
+async def upload_vessels_dataset(file: UploadFile = File(...)):
+    """
+    Upload a CSV of AIS vessel data to replace the in-memory fleet.
+    Expected columns: MMSI, VesselName (or NAME), VesselType (or TYPE),
+    LAT, LON, SOG (speed), COG (heading), Flag, Destination, Cargo.
+    """
+    global _VESSELS_CACHE, _VESSELS_DICT_CACHE, _PRIME_SUSPECT_CACHE
+    try:
+        contents = await file.read()
+        text = contents.decode("utf-8", errors="replace")
+        import csv, io as _io
+        reader = csv.DictReader(_io.StringIO(text))
+        loaded = []
+        for row in reader:
+            def g(*keys):
+                for k in keys:
+                    for rk in row:
+                        if rk.strip().upper() == k.upper():
+                            v = row[rk].strip()
+                            if v:
+                                return v
+                return ""
+
+            try:
+                lat = float(g("LAT", "LATITUDE"))
+                lon = float(g("LON", "LON", "LONGITUDE"))
+            except ValueError:
+                continue
+
+            mmsi = g("MMSI") or str(200000000 + len(loaded))
+            loaded.append({
+                "mmsi": mmsi,
+                "name": g("VesselName", "NAME", "VESSEL_NAME") or f"VESSEL_{mmsi[-4:]}",
+                "lat": lat,
+                "lon": lon,
+                "speed": float(g("SOG", "SPEED") or 0),
+                "heading": float(g("COG", "HEADING") or 0),
+                "type": g("VesselType", "TYPE", "VESSEL_TYPE") or "Unknown",
+                "flag": g("Flag", "FLAG") or "",
+                "destination": g("Destination", "DESTINATION") or "",
+                "cargo_type": g("Cargo", "CARGO", "CARGO_TYPE") or "",
+                "status": "Underway",
+                "anomaly_score": 0.0,
+                "is_anomaly": False,
+                "is_prime_suspect": False,
+                "attribution_score": None,
+            })
+
+        if not loaded:
+            raise HTTPException(status_code=400, detail="No valid vessel rows found. Check column names.")
+
+        _VESSELS_CACHE = loaded
+        _VESSELS_DICT_CACHE = None
+        _PRIME_SUSPECT_CACHE = None
+        anomalies = sum(1 for v in loaded if v.get("is_anomaly"))
+        return {"total": len(loaded), "anomalies": anomalies, "vessels": loaded}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"CSV parse error: {str(e)}")
+
+
+# ============================================================
 # MAIN RUNNER
 # ============================================================
 if __name__ == "__main__":
