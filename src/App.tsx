@@ -14,7 +14,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import type { Vessel } from '@/lib/api';
 
 function App() {
-  const [inLanding, setInLanding] = useState(true);
+  const [inLanding, setInLanding] = useState(false);
   const [page, setPage] = useState<PageId>('dashboard');
   const {
     online,
@@ -73,7 +73,7 @@ function App() {
         onNavigate={setPage}
         anomalyCount={anomalyCount}
       />
-      <main className="flex-1 ml-48 mt-14 overflow-hidden">
+      <main className="flex-1 ml-52 mt-14 overflow-hidden">
         <ErrorBoundary fallbackTitle={`Recovered view: ${page}`}>
           <div key={page} className="h-full animate-fade-in">
             {page === 'dashboard' && (
