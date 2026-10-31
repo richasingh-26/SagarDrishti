@@ -49,96 +49,12 @@ import {
   type Vessel,
   type Waypoint,
 } from '@/lib/api';
+import { isPointInWater, snapToWater, isPointOnLand } from '@/lib/maritimeBoundaries';
 
 interface FleetBuilderProps {
   vessels: Vessel[];
   onRefresh?: () => void;
   onNavigateToDashboard?: () => void;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MARITIME WATER-ONLY POLYGON (Singapore Strait & surrounding sea)
-// Ships CANNOT be placed on land. Any waypoint must fall inside one of these
-// navigable water zones. Zones are conservative – well inside the sea.
-// ─────────────────────────────────────────────────────────────────────────────
-interface WaterZone {
-  name: string;
-  // lat/lon bounding box (fast first-pass filter)
-  latMin: number; latMax: number; lonMin: number; lonMax: number;
-  // optional inner exclusion zones (land masses that cut into bounding box)
-  exclude?: Array<{ latMin: number; latMax: number; lonMin: number; lonMax: number }>;
-}
-
-const NAVIGABLE_WATER_ZONES: WaterZone[] = [
-  {
-    // Singapore Strait TSS main channel (between Singapore island & Batam/Bintan)
-    name: 'Singapore Strait (Main Channel)',
-    latMin: 1.09, latMax: 1.38, lonMin: 103.50, lonMax: 104.15,
-    exclude: [
-      // Singapore Island main land mass
-      { latMin: 1.22, latMax: 1.48, lonMin: 103.62, lonMax: 104.01 },
-      // Sentosa + Pulau Brani
-      { latMin: 1.22, latMax: 1.26, lonMin: 103.80, lonMax: 103.88 },
-      // Batam Island (Indonesia)
-      { latMin: 1.00, latMax: 1.14, lonMin: 103.95, lonMax: 104.13 },
-      // Bintan Island coast (west tip)
-      { latMin: 1.05, latMax: 1.20, lonMin: 104.10, lonMax: 104.20 },
-      // Johor Bahru / Malaysian land
-      { latMin: 1.38, latMax: 1.60, lonMin: 103.55, lonMax: 104.20 },
-    ],
-  },
-  {
-    // Western Malacca approach / Philip Channel west
-    name: 'Philip Channel (West)',
-    latMin: 1.10, latMax: 1.30, lonMin: 103.35, lonMax: 103.62,
-  },
-  {
-    // Eastern Singapore Strait / St John's Channel
-    name: 'Eastern Strait',
-    latMin: 1.08, latMax: 1.28, lonMin: 104.10, lonMax: 104.40,
-  },
-];
-
-/**
- * Returns true if (lat, lon) is over navigable open water for this region.
- * Uses a fast bounding-box check + land-exclusion zones.
- */
-function isOpenWater(lat: number, lon: number): boolean {
-  for (const zone of NAVIGABLE_WATER_ZONES) {
-    if (lat >= zone.latMin && lat <= zone.latMax && lon >= zone.lonMin && lon <= zone.lonMax) {
-      // Inside the zone's bounding box – check land exclusions
-      if (zone.exclude) {
-        const onLand = zone.exclude.some(
-          (ex) => lat >= ex.latMin && lat <= ex.latMax && lon >= ex.lonMin && lon <= ex.lonMax
-        );
-        if (onLand) return false;
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Snaps a coordinate pair to the nearest open-water position by walking
- * along a small spiral/grid around the original point.
- * Falls back to a safe deep-water anchor if nothing is found.
- */
-function snapToWater(lat: number, lon: number): { lat: number; lon: number } {
-  if (isOpenWater(lat, lon)) return { lat, lon };
-  // Search expanding rings (0.005° ≈ ~550m steps)
-  for (let r = 0.008; r <= 0.12; r += 0.008) {
-    for (let angle = 0; angle < 360; angle += 30) {
-      const rad = (angle * Math.PI) / 180;
-      const tryLat = lat + r * Math.cos(rad);
-      const tryLon = lon + r * Math.sin(rad);
-      if (isOpenWater(tryLat, tryLon)) {
-        return { lat: parseFloat(tryLat.toFixed(4)), lon: parseFloat(tryLon.toFixed(4)) };
-      }
-    }
-  }
-  // Hard fallback – centre of Singapore Strait
-  return { lat: 1.20, lon: 103.78 };
 }
 
 // Military-Grade Dark Canvas (ESRI Dark Base - 100% Free, Zero Watermarks, Clean Coastlines)
@@ -190,15 +106,15 @@ const PRESET_ROUTES = {
     mmsi: '563990123',
     type: 'Crude Oil Tanker',
     flag: 'India',
-    speed: 3.2,
+    speed: 13.2,
     heading: 110,
     cargo: 'Crude Oil',
-    destination: 'Jurong Port',
+    destination: 'Jurong Port Anchorage',
     status: 'Underway Using Engine',
     waypoints: [
-      { lat: 1.345, lon: 103.65, speed: 14.0, heading: 115, timestamp: '10:00' },
-      { lat: 1.315, lon: 103.71, speed: 8.5, heading: 112, timestamp: '11:15' },
-      { lat: 1.285, lon: 103.75, speed: 3.2, heading: 110, timestamp: '12:30' },
+      { lat: 1.185, lon: 103.620, speed: 14.0, heading: 115, timestamp: '10:00' },
+      { lat: 1.215, lon: 103.730, speed: 10.5, heading: 112, timestamp: '11:15' },
+      { lat: 1.228, lon: 103.820, speed: 3.2, heading: 110, timestamp: '12:30' },
     ],
   },
   malacca_cargo: {
@@ -212,9 +128,10 @@ const PRESET_ROUTES = {
     destination: 'Mumbai Port',
     status: 'Underway',
     waypoints: [
-      { lat: 1.18, lon: 103.95, speed: 18.0, heading: 280, timestamp: '08:00' },
-      { lat: 1.22, lon: 103.88, speed: 18.5, heading: 285, timestamp: '09:00' },
-      { lat: 1.26, lon: 103.8, speed: 18.5, heading: 285, timestamp: '10:00' },
+      { lat: 1.240, lon: 103.950, speed: 18.0, heading: 280, timestamp: '08:00' },
+      { lat: 1.225, lon: 103.850, speed: 18.5, heading: 285, timestamp: '09:00' },
+      { lat: 1.205, lon: 103.720, speed: 18.5, heading: 285, timestamp: '10:00' },
+      { lat: 1.175, lon: 103.580, speed: 18.5, heading: 285, timestamp: '11:00' },
     ],
   },
   erratic_spill_suspect: {
@@ -228,9 +145,9 @@ const PRESET_ROUTES = {
     destination: 'Eastern Anchorage',
     status: 'Maneuvering',
     waypoints: [
-      { lat: 1.33, lon: 103.67, speed: 12.0, heading: 110, timestamp: '07:30' },
-      { lat: 1.29, lon: 103.72, speed: 2.1, heading: 85, timestamp: '09:00' },
-      { lat: 1.27, lon: 103.74, speed: 1.8, heading: 45, timestamp: '10:45' },
+      { lat: 1.210, lon: 103.730, speed: 12.0, heading: 110, timestamp: '07:30' },
+      { lat: 1.225, lon: 103.800, speed: 2.1, heading: 85, timestamp: '09:00' },
+      { lat: 1.238, lon: 103.860, speed: 1.8, heading: 45, timestamp: '10:45' },
     ],
   },
   container_carrier: {
@@ -244,11 +161,11 @@ const PRESET_ROUTES = {
     destination: 'Singapore Port / Tanjung Pelepas',
     status: 'Underway Using Engine',
     waypoints: [
-      { lat: 1.152, lon: 103.451, speed: 18.5, heading: 65, timestamp: '00:00' },
-      { lat: 1.189, lon: 103.582, speed: 18.0, heading: 68, timestamp: '01:30' },
-      { lat: 1.224, lon: 103.712, speed: 6.2, heading: 72, timestamp: '03:45' },
-      { lat: 1.268, lon: 103.835, speed: 14.5, heading: 70, timestamp: '06:15' },
-      { lat: 1.328, lon: 104.045, speed: 17.8, heading: 75, timestamp: '09:30' },
+      { lat: 1.155, lon: 103.480, speed: 18.5, heading: 68, timestamp: '00:00' },
+      { lat: 1.185, lon: 103.620, speed: 18.0, heading: 68, timestamp: '01:30' },
+      { lat: 1.215, lon: 103.760, speed: 16.2, heading: 72, timestamp: '03:45' },
+      { lat: 1.240, lon: 103.900, speed: 14.5, heading: 70, timestamp: '06:15' },
+      { lat: 1.285, lon: 104.080, speed: 17.8, heading: 75, timestamp: '09:30' },
     ],
   },
 };
@@ -278,11 +195,12 @@ export function FleetBuilder({
   const [width, setWidth] = useState(44);
   const [draught, setDraught] = useState(14.5);
 
-  // Waypoints state
+  // Waypoints state (strictly verified ocean/water fairway coordinates)
   const [waypoints, setWaypoints] = useState<Waypoint[]>([
-    { lat: 1.335, lon: 103.66, speed: 14.5, heading: 120, timestamp: '08:00' },
-    { lat: 1.305, lon: 103.71, speed: 12.8, heading: 125, timestamp: '09:15' },
-    { lat: 1.275, lon: 103.76, speed: 12.4, heading: 125, timestamp: '10:30' },
+    { lat: 1.185, lon: 103.620, speed: 14.5, heading: 110, timestamp: '08:00' },
+    { lat: 1.215, lon: 103.730, speed: 12.8, heading: 115, timestamp: '09:15' },
+    { lat: 1.228, lon: 103.820, speed: 12.4, heading: 115, timestamp: '10:30' },
+    { lat: 1.248, lon: 103.930, speed: 13.0, heading: 110, timestamp: '11:45' },
   ]);
 
   // Real-Time AIS Simulation State
@@ -312,8 +230,6 @@ export function FleetBuilder({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [apiConnected, setApiConnected] = useState<boolean>(true);
-  // Land-placement warning toast
-  const [landWarn, setLandWarn] = useState<string | null>(null);
 
   // Map & Markers Refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -441,32 +357,30 @@ export function FleetBuilder({
         map.getCanvas().style.cursor = '';
       });
 
-      // Map click for appending waypoints — blocked on land
+      // Map click for appending waypoints (strictly restricted to ocean / water)
       map.on('click', (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ['fleet-context-pts'] });
         if (features && features.length > 0) return;
 
         if (activeTabRef.current !== 'builder') return;
         const { lng, lat } = e.lngLat;
+        const inWater = isPointInWater(lat, lng);
+        const [safeLat, safeLon] = inWater ? [parseFloat(lat.toFixed(4)), parseFloat(lng.toFixed(4))] : snapToWater(lat, lng);
 
-        // ── Water-only enforcement ──────────────────────────────────────────
-        if (!isOpenWater(lat, lng)) {
-          setLandWarn('⚠ Cannot place waypoint on land. Click within the navigable sea lanes.');
-          setTimeout(() => setLandWarn(null), 3500);
-          // Flash the cursor red via canvas briefly
-          const canvas = map.getCanvas();
-          canvas.style.outline = '3px solid #FF4444';
-          setTimeout(() => { canvas.style.outline = ''; }, 500);
-          return;
+        if (!inWater) {
+          setNotification({
+            type: 'error',
+            text: `Coastal Land Boundary Detected: Waypoint automatically adjusted to nearest navigable ocean fairway (${safeLat.toFixed(4)}°N, ${safeLon.toFixed(4)}°E). Vessels can only travel in water.`,
+          });
+          setTimeout(() => setNotification(null), 4500);
         }
-        // ───────────────────────────────────────────────────────────────────
 
         const nextTime = `T+${(waypointsRef.current.length + 1) * 30}m`;
         setWaypoints((prev) => [
           ...prev,
           {
-            lat: parseFloat(lat.toFixed(4)),
-            lon: parseFloat(lng.toFixed(4)),
+            lat: safeLat,
+            lon: safeLon,
             speed: speedRef.current,
             heading: headingRef.current,
             timestamp: nextTime,
@@ -490,21 +404,30 @@ export function FleetBuilder({
     };
   }, []);
 
-  // Real-Time Motion Simulation Loop & Live Camera Follow
+  // Real-Time Motion Simulation Loop & Live Camera Follow (Strict Water Navigation)
   useEffect(() => {
     if (!isSimulatingLive || waypoints.length < 2) return;
 
+    let forward = true;
     const interval = setInterval(() => {
       setSimStepIndex((prevIdx) => {
-        const nextIdx = (prevIdx + 1) % waypoints.length;
-        const pt = waypoints[nextIdx];
-        setLivePos({ lat: pt.lat, lon: pt.lon });
-        setSpeed(pt.speed || 12.0);
-        setHeading(pt.heading || 120);
+        let nextIdx = forward ? prevIdx + 1 : prevIdx - 1;
+        if (nextIdx >= waypoints.length) {
+          forward = false;
+          nextIdx = Math.max(0, waypoints.length - 2);
+        } else if (nextIdx < 0) {
+          forward = true;
+          nextIdx = Math.min(1, waypoints.length - 1);
+        }
+        const rawPt = waypoints[nextIdx];
+        const [safeLat, safeLon] = snapToWater(rawPt.lat, rawPt.lon);
+        setLivePos({ lat: safeLat, lon: safeLon });
+        setSpeed(rawPt.speed || 12.0);
+        setHeading(rawPt.heading || 120);
 
         if (mapRef.current) {
           mapRef.current.easeTo({
-            center: [pt.lon, pt.lat],
+            center: [safeLon, safeLat],
             zoom: 11.8,
             duration: 800,
           });
@@ -516,7 +439,7 @@ export function FleetBuilder({
     return () => clearInterval(interval);
   }, [isSimulatingLive, waypoints]);
 
-  const activeShipPos = livePos || (waypoints.length > 0 ? waypoints[waypoints.length - 1] : { lat: 1.275, lon: 103.76 });
+  const activeShipPos = livePos || (waypoints.length > 0 ? waypoints[waypoints.length - 1] : { lat: 1.225, lon: 103.82 });
 
   // Update Vector Layers & High-Visibility Holographic HTML Tactical Markers
   useEffect(() => {
@@ -783,16 +706,17 @@ export function FleetBuilder({
       markersRef.current.push(originMarker);
     }
 
-    // 5. Surrounding Fleet Vessels across ALL 10,001 vessels
+    // 5. Surrounding Fleet Vessels across ALL 10,001 vessels (strictly in ocean/water)
     const fleetFeatures: GeoJSON.Feature[] = [];
     if (showSurroundingFleets && vessels.length > 0) {
       vessels.forEach((v) => {
         if (typeof v.lat !== 'number' || typeof v.lon !== 'number' || !isFinite(v.lat) || !isFinite(v.lon)) return;
+        const [safeLat, safeLon] = snapToWater(v.lat, v.lon);
         const isAnom = Boolean(v.is_anomaly || (v as any).anomaly === -1 || (v.anomaly_score !== undefined && v.anomaly_score < 0));
         const color = v.is_prime_suspect ? '#FFD700' : isAnom ? '#FF4444' : '#00E5FF';
         fleetFeatures.push({
           type: 'Feature',
-          geometry: { type: 'Point', coordinates: [v.lon, v.lat] },
+          geometry: { type: 'Point', coordinates: [safeLon, safeLat] },
           properties: {
             name: v.name,
             mmsi: v.mmsi,
@@ -944,42 +868,48 @@ export function FleetBuilder({
     setDestination(v.destination || 'Singapore Port');
     setStatus(v.status || 'Underway Using Engine');
 
-    const baseLat = v.lat;
-    const baseLon = v.lon;
+    const [safeBaseLat, safeBaseLon] = snapToWater(v.lat, v.lon);
     const vSpeed = v.speed || 12.0;
     const vHeading = v.heading || 120;
-    const rad = vHeading * (Math.PI / 180);
-
-    // ── Water-only: snap the base position first ─────────────────────────
-    const baseSnapped = snapToWater(baseLat, baseLon);
-
-    // Helper: generate a candidate waypoint along heading and snap it to water
-    const makeWaterWaypoint = (
-      dlat: number,
-      dlon: number,
-      ts: string
-    ): Waypoint => {
-      const snapped = snapToWater(baseSnapped.lat + dlat, baseSnapped.lon + dlon);
-      return {
-        lat: snapped.lat,
-        lon: snapped.lon,
-        speed: vSpeed,
-        heading: vHeading,
-        timestamp: ts,
-      };
-    };
 
     const generatedWaypoints: Waypoint[] = v.route && v.route.length > 0
-      ? v.route.map((wp) => {
-          const s = snapToWater(wp.lat, wp.lon);
-          return { ...wp, lat: s.lat, lon: s.lon };
+      ? v.route.map((pt) => {
+          const [sLat, sLon] = snapToWater(pt.lat, pt.lon);
+          return { ...pt, lat: sLat, lon: sLon };
         })
       : [
-          makeWaterWaypoint(-0.04 * Math.cos(rad), -0.04 * Math.sin(rad), 'T-1h'),
-          makeWaterWaypoint(-0.02 * Math.cos(rad), -0.02 * Math.sin(rad), 'T-30m'),
-          { lat: baseSnapped.lat, lon: baseSnapped.lon, speed: vSpeed, heading: vHeading, timestamp: 'Current Pos' },
-          makeWaterWaypoint( 0.03 * Math.cos(rad),  0.03 * Math.sin(rad), 'T+30m'),
-        ];
+          {
+            lat: parseFloat((safeBaseLat - 0.015).toFixed(4)),
+            lon: parseFloat((safeBaseLon - 0.045).toFixed(4)),
+            speed: vSpeed,
+            heading: vHeading,
+            timestamp: 'T-1h',
+          },
+          {
+            lat: parseFloat((safeBaseLat - 0.008).toFixed(4)),
+            lon: parseFloat((safeBaseLon - 0.020).toFixed(4)),
+            speed: vSpeed,
+            heading: vHeading,
+            timestamp: 'T-30m',
+          },
+          {
+            lat: safeBaseLat,
+            lon: safeBaseLon,
+            speed: vSpeed,
+            heading: vHeading,
+            timestamp: 'Current Pos',
+          },
+          {
+            lat: parseFloat((safeBaseLat + 0.008).toFixed(4)),
+            lon: parseFloat((safeBaseLon + 0.030).toFixed(4)),
+            speed: vSpeed,
+            heading: vHeading,
+            timestamp: 'T+30m',
+          },
+        ].map((pt) => {
+          const [sLat, sLon] = snapToWater(pt.lat, pt.lon);
+          return { ...pt, lat: sLat, lon: sLon };
+        });
 
     setWaypoints(generatedWaypoints);
     setLivePos(null);
@@ -987,7 +917,7 @@ export function FleetBuilder({
     setActiveTab('builder');
 
     if (mapRef.current) {
-      mapRef.current.flyTo({ center: [baseLon, baseLat], zoom: 12.0, duration: 1000 });
+      mapRef.current.flyTo({ center: [safeBaseLon, safeBaseLat], zoom: 12.0, duration: 1000 });
     }
   };
 
@@ -1647,14 +1577,6 @@ export function FleetBuilder({
           <span>COG: <b className="text-[#38EF7D]">{heading}°</b></span>
         </div>
 
-        {/* Land-placement warning toast */}
-        {landWarn && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-[#FF4444]/70 bg-[rgba(30,5,5,0.92)] text-[#FF6666] text-xs font-mono font-bold shadow-2xl backdrop-blur-md animate-bounce-slow pointer-events-none">
-            <span className="text-[#FF4444] text-base">⛔</span>
-            {landWarn}
-          </div>
-        )}
-
         {/* Tactical Map Legend */}
         <div className="absolute bottom-4 left-4 z-10 glass-panel p-3.5 border border-cyan-dim space-y-2 text-[0.625rem] max-w-xs shadow-2xl backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-cyan-dim/40 pb-1 mb-1">
@@ -1668,7 +1590,7 @@ export function FleetBuilder({
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-[#FFD700] border border-black shrink-0" />
-            <span className="text-white">Trajectory Waypoints (Click Sea to Add · Land Blocked)</span>
+            <span className="text-white">Trajectory Waypoints (Click Map to Add)</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-4 h-0.5 bg-[#00E5FF] shrink-0 border-t-2 border-dashed border-[#00E5FF]" />

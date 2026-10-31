@@ -3,6 +3,14 @@ import { Badge } from '@/components/Badge';
 import { PanelHeader } from '@/components/Panel';
 import { API_BASE, getVessels } from '@/lib/api';
 import {
+  isPointInWater,
+  snapToWater,
+  SINGAPORE_MAINLAND,
+  JOHOR_MALAYSIA,
+  BATAM_INDONESIA,
+  BINTAN_INDONESIA,
+} from '@/lib/maritimeBoundaries';
+import {
   FlaskConical,
   Ship,
   Plus,
@@ -69,14 +77,14 @@ export function ScenarioBuilder() {
   const [ships, setShips] = useState<ScenarioVessel[]>([]);
   const [shipForm, setShipForm] = useState({
     name: '',
-    lat: '1.25',
-    lon: '103.8',
-    speed: '10.0',
+    lat: '1.220',
+    lon: '103.820',
+    speed: '12.0',
     heading: '90',
   });
   const [spill, setSpill] = useState<SpillConfig>({
-    lat: 1.3,
-    lon: 103.9,
+    lat: 1.225,
+    lon: 103.820,
     radiusKm: 3.0,
     placed: false,
   });
@@ -88,7 +96,7 @@ export function ScenarioBuilder() {
 
   const nextId = useCallback(() => `ship-${++shipIdRef.current}`, []);
 
-  // Load real anomalous vessels from backend on mount
+  // Load real anomalous vessels from backend on mount (strictly in open water)
   useEffect(() => {
     getVessels()
       .then((res) => {
@@ -97,16 +105,19 @@ export function ScenarioBuilder() {
           .slice(0, 5);
         if (anomalous.length > 0) {
           setShips(
-            anomalous.map((v) => ({
-              id: nextId(),
-              name: v.name,
-              mmsi: v.mmsi,
-              lat: v.lat,
-              lon: v.lon,
-              speed: v.speed,
-              heading: v.heading,
-              anomaly: 1,
-            }))
+            anomalous.map((v) => {
+              const [safeLat, safeLon] = snapToWater(v.lat, v.lon);
+              return {
+                id: nextId(),
+                name: v.name,
+                mmsi: v.mmsi,
+                lat: safeLat,
+                lon: safeLon,
+                speed: v.speed || 12.0,
+                heading: v.heading || 90,
+                anomaly: 1,
+              };
+            })
           );
         }
       })
@@ -123,16 +134,19 @@ export function ScenarioBuilder() {
           .slice(0, 5);
         if (anomalous.length > 0) {
           setShips(
-            anomalous.map((v) => ({
-              id: nextId(),
-              name: v.name,
-              mmsi: v.mmsi,
-              lat: v.lat,
-              lon: v.lon,
-              speed: v.speed,
-              heading: v.heading,
-              anomaly: 1,
-            }))
+            anomalous.map((v) => {
+              const [safeLat, safeLon] = snapToWater(v.lat, v.lon);
+              return {
+                id: nextId(),
+                name: v.name,
+                mmsi: v.mmsi,
+                lat: safeLat,
+                lon: safeLon,
+                speed: v.speed || 12.0,
+                heading: v.heading || 90,
+                anomaly: 1,
+              };
+            })
           );
           setUsingFallback(true);
         }
@@ -145,9 +159,14 @@ export function ScenarioBuilder() {
   const addShip = () => {
     const name = shipForm.name.trim();
     if (!name) return;
-    const lat = parseFloat(shipForm.lat);
-    const lon = parseFloat(shipForm.lon);
-    if (isNaN(lat) || isNaN(lon)) return;
+    const rawLat = parseFloat(shipForm.lat);
+    const rawLon = parseFloat(shipForm.lon);
+    if (isNaN(rawLat) || isNaN(rawLon)) return;
+    const [lat, lon] = snapToWater(rawLat, rawLon);
+    if (!isPointInWater(rawLat, rawLon)) {
+      setError(`Notice: Input coordinate was on coastal land. Automatically adjusted to nearest navigable ocean channel (${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E).`);
+      setTimeout(() => setError(null), 4000);
+    }
     const speed = parseFloat(shipForm.speed) || 0;
     const heading = parseFloat(shipForm.heading) || 0;
     setShips((prev) => [
@@ -172,9 +191,10 @@ export function ScenarioBuilder() {
   };
 
   const placeSpill = () => {
-    const lat = parseFloat(String(spill.lat));
-    const lon = parseFloat(String(spill.lon));
-    if (isNaN(lat) || isNaN(lon)) return;
+    const rawLat = parseFloat(String(spill.lat));
+    const rawLon = parseFloat(String(spill.lon));
+    if (isNaN(rawLat) || isNaN(rawLon)) return;
+    const [lat, lon] = snapToWater(rawLat, rawLon);
     setSpill((prev) => ({ ...prev, lat, lon, placed: true }));
   };
 
@@ -423,6 +443,81 @@ export function ScenarioBuilder() {
 
               {/* Sea background */}
               <rect width={MAP_W} height={MAP_H} fill="url(#scenarioSea)" />
+
+              {/* Tactical Landmasses (Peninsular Malaysia / Johor, Singapore Island, Batam / Bintan Indonesia) */}
+              {/* 1. Peninsular Malaysia (Johor) */}
+              <polygon
+                points={JOHOR_MALAYSIA.map(([lon, lat]) => `${lonToX(lon)},${latToY(lat)}`).join(' ')}
+                fill="#111C2E"
+                stroke="#2A3D59"
+                strokeWidth="1.2"
+              />
+              <text x={lonToX(103.75)} y={latToY(1.58)} fill="#476282" fontSize="9" fontFamily="monospace" fontWeight="bold" letterSpacing="2">
+                MALAYSIA (JOHOR)
+              </text>
+
+              {/* 2. Singapore Island Mainland */}
+              <polygon
+                points={SINGAPORE_MAINLAND.map(([lon, lat]) => `${lonToX(lon)},${latToY(lat)}`).join(' ')}
+                fill="#15243B"
+                stroke="#3B5377"
+                strokeWidth="1.4"
+              />
+              <text x={lonToX(103.82)} y={latToY(1.36)} fill="#5A7BA3" fontSize="8.5" fontFamily="monospace" fontWeight="bold" textAnchor="middle" letterSpacing="1.5">
+                SINGAPORE
+              </text>
+
+              {/* 3. Batam Island (Indonesia) */}
+              <polygon
+                points={BATAM_INDONESIA.map(([lon, lat]) => `${lonToX(lon)},${latToY(lat)}`).join(' ')}
+                fill="#111C2E"
+                stroke="#2A3D59"
+                strokeWidth="1.2"
+              />
+              <text x={lonToX(104.03)} y={latToY(1.08)} fill="#476282" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle" letterSpacing="1">
+                BATAM (INDONESIA)
+              </text>
+
+              {/* 4. Bintan Island (Indonesia) */}
+              <polygon
+                points={BINTAN_INDONESIA.map(([lon, lat]) => `${lonToX(lon)},${latToY(lat)}`).join(' ')}
+                fill="#111C2E"
+                stroke="#2A3D59"
+                strokeWidth="1.2"
+              />
+
+              {/* Singapore Strait TSS Fairway Water Corridor Guidelines */}
+              <line
+                x1={lonToX(103.45)}
+                y1={latToY(1.235)}
+                x2={lonToX(104.35)}
+                y2={latToY(1.255)}
+                stroke="#00E5FF"
+                strokeWidth="1"
+                strokeOpacity="0.25"
+                strokeDasharray="4 4"
+              />
+              <line
+                x1={lonToX(103.45)}
+                y1={latToY(1.195)}
+                x2={lonToX(104.35)}
+                y2={latToY(1.215)}
+                stroke="#00E5FF"
+                strokeWidth="1"
+                strokeOpacity="0.25"
+                strokeDasharray="4 4"
+              />
+              <text
+                x={lonToX(103.90)}
+                y={latToY(1.228) - 4}
+                fill="#00E5FF"
+                fontSize="7.5"
+                fontFamily="monospace"
+                opacity="0.45"
+                letterSpacing="1"
+              >
+                SINGAPORE STRAIT SHIPPING LANE (DEEP WATER)
+              </text>
 
               {/* Wave lines */}
               {Array.from({ length: Math.ceil(MAP_H / 40) }, (_, i) => (
