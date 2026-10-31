@@ -19,6 +19,16 @@ import {
   Anchor,
   Activity,
   AlertTriangle,
+  Cpu,
+  FileCheck2,
+  Database,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  TrendingUp,
 } from 'lucide-react';
 
 interface LandingProps {
@@ -49,7 +59,7 @@ export function Landing({ onEnter }: LandingProps) {
     {
       id: 'dashboard',
       title: 'Command Center',
-      desc: 'Tactical maritime surveillance',
+      desc: 'Tactical maritime surveillance & alert feed',
       page: 'dashboard',
       img: '/visuals/cards/social-track.jpg',
       icon: Shield,
@@ -57,7 +67,7 @@ export function Landing({ onEnter }: LandingProps) {
     {
       id: 'vessels',
       title: 'AIS Fleet Track',
-      desc: '10,000+ live vessel tracking',
+      desc: '10,001 live vessel trajectories & dark fleet isolation',
       page: 'vessels',
       img: '/visuals/cards/ai-mode.jpg',
       icon: Radio,
@@ -65,7 +75,7 @@ export function Landing({ onEnter }: LandingProps) {
     {
       id: 'spill-detection',
       title: 'SAR AI Analysis',
-      desc: 'Sentinel-1 U-Net++ inference',
+      desc: 'Sentinel-1 U-Net++ segmentation & dB damping',
       page: 'spill-detection',
       img: '/visuals/cards/flood-dispatch.jpg',
       icon: ScanEye,
@@ -73,7 +83,7 @@ export function Landing({ onEnter }: LandingProps) {
     {
       id: 'fleet-builder',
       title: 'Custom Ship Studio',
-      desc: 'Dark fleet kinematic simulator',
+      desc: 'Dark fleet kinematic simulator & spoof detection',
       page: 'fleet-builder',
       img: '/visuals/cards/crop-damage.jpg',
       icon: SlidersHorizontal,
@@ -81,7 +91,7 @@ export function Landing({ onEnter }: LandingProps) {
     {
       id: 'scenario-builder',
       title: 'Drift Simulator',
-      desc: 'Copernicus reverse trajectory',
+      desc: 'Copernicus Lagrangian reverse trajectory backtracking',
       page: 'scenario-builder',
       img: '/visuals/cards/social-track.jpg',
       icon: FlaskConical,
@@ -157,8 +167,8 @@ export function Landing({ onEnter }: LandingProps) {
   const currentHotspot = hotspots[selectedHotspot] || hotspots.singapore;
 
   return (
-    <div className="relative min-h-screen w-full bg-[#060B10] text-white overflow-x-hidden font-sans select-none">
-      {/* 1. 4K LOOPING EARTH VIDEO GLOBE */}
+    <div className="relative min-h-screen w-full bg-[#060B10] text-white font-sans">
+      {/* 1. 4K LOOPING EARTH VIDEO GLOBE (FIXED PINNED BACKGROUND) */}
       <div className="site-video-background" aria-hidden="true">
         <video
           ref={videoRef}
@@ -232,7 +242,7 @@ export function Landing({ onEnter }: LandingProps) {
             {/* Velocity Vectors (Arrow nodes) */}
             <g className="animate-pulse-subtle">
               <circle cx="880" cy="510" r="3.5" fill="#5FE38A" />
-              <line x1="880" y1="510" x2="905" y2="520" stroke="#5FE38A" strokeWidth="1.5" markerEnd="url(#arrow)" />
+              <line x1="880" y1="510" x2="905" y2="520" stroke="#5FE38A" strokeWidth="1.5" />
               <text x="912" y="524" fill="#5FE38A" fontSize="9" fontFamily="monospace" fontWeight="bold">
                 1.42 kn → 118°
               </text>
@@ -265,12 +275,11 @@ export function Landing({ onEnter }: LandingProps) {
               className="opacity-70"
             />
 
-            {/* Vessel Nodes along the corridor (Matching user's reference UI) */}
+            {/* Vessel Nodes along the corridor */}
             <g>
               {/* VLCC Tanker */}
               <circle cx="890" cy="510" r="6" fill="#5FE38A" className="animate-ping" opacity="0.4" />
               <circle cx="890" cy="510" r="4" fill="#5FE38A" />
-              <polygon points="890,503 895,516 890,513 885,516" fill="#060B10" transform="rotate(95 890 510)" />
 
               {/* Chemical Tanker */}
               <circle cx="1020" cy="540" r="4.5" fill="#3B82F6" />
@@ -336,8 +345,8 @@ export function Landing({ onEnter }: LandingProps) {
         )}
       </div>
 
-      {/* 3. TOP NAVIGATION BAR */}
-      <header className="relative z-50 flex items-center justify-between px-6 md:px-10 py-4 backdrop-blur-xl bg-[#060B10]/60 border-b border-white/[0.08]">
+      {/* 3. STICKY TOP NAVIGATION BAR */}
+      <header className="sticky top-0 z-50 flex items-center justify-between px-6 md:px-10 py-4 backdrop-blur-2xl bg-[#060B10]/75 border-b border-white/[0.08] transition-all">
         <div className="flex items-center gap-3">
           {/* Orbital Radar Mark */}
           <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
@@ -376,20 +385,21 @@ export function Landing({ onEnter }: LandingProps) {
         </div>
 
         {/* Center Nav Link Capsules */}
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.06]">
+        <div className="hidden lg:flex items-center gap-1 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.06]">
           {[
-            { label: 'Overview', page: 'dashboard' },
-            { label: 'AIS Fleet Track', page: 'vessels' },
-            { label: 'SAR Spill AI', page: 'spill-detection' },
-            { label: 'Drift Simulator', page: 'scenario-builder' },
+            { label: 'Overview', href: '#hero' },
+            { label: 'Modules', href: '#modules' },
+            { label: 'AI Engines', href: '#engines' },
+            { label: 'Telemetry', href: '#telemetry' },
+            { label: 'Workflow', href: '#workflow' },
           ].map((item) => (
-            <button
+            <a
               key={item.label}
-              onClick={() => onEnter(item.page)}
+              href={item.href}
               className="px-3.5 py-1 text-xs text-[#CBD5E1] hover:text-white rounded-full hover:bg-white/[0.06] transition-all"
             >
               {item.label}
-            </button>
+            </a>
           ))}
         </div>
 
@@ -405,8 +415,8 @@ export function Landing({ onEnter }: LandingProps) {
         </div>
       </header>
 
-      {/* 4. MAIN HERO SECTION WITH TACTICAL OCEAN HUD CARDS */}
-      <main className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 pt-8 pb-20">
+      {/* 4. MAIN HERO SECTION */}
+      <section id="hero" className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 pt-10 pb-16">
         <div className="flex flex-col lg:flex-row items-start justify-between min-h-[460px] gap-8">
           {/* Left Hero Text & Search */}
           <div className="max-w-[580px] z-10 pt-2">
@@ -427,7 +437,7 @@ export function Landing({ onEnter }: LandingProps) {
 
             {/* Subtitle */}
             <p className="text-[14.5px] text-[#94A3B8] leading-relaxed mb-6 max-w-[520px]">
-              Sentinel-1 SAR semantic segmentation meets 10,000+ real-time AIS vessel telemetry and Copernicus surface currents.
+              Sentinel-1 SAR semantic segmentation meets 10,001 real-time AIS vessel telemetry and Copernicus surface currents.
               Detect oil discharges, simulate reverse ocean drift, and unmask dark fleet polluters.
             </p>
 
@@ -527,7 +537,7 @@ export function Landing({ onEnter }: LandingProps) {
               ))}
             </div>
 
-            {/* THE FROSTED GLASS TACTICAL OCEAN CARD (User's reference image style) */}
+            {/* THE FROSTED GLASS TACTICAL OCEAN CARD */}
             <div className="ocean-tactical-card group">
               {/* Card Header with Directional Pointer Reticle */}
               <div className="flex items-start justify-between mb-3">
@@ -572,7 +582,7 @@ export function Landing({ onEnter }: LandingProps) {
                 </button>
               </div>
 
-              {/* Big Percentage Metric (Matching 'Passenger Load 87%' from reference image) */}
+              {/* Big Percentage Metric */}
               <div className="flex items-baseline justify-between mb-3.5 pb-3 border-b border-white/[0.08]">
                 <div>
                   <div className="text-3xl font-extrabold text-white tracking-tight flex items-baseline gap-1">
@@ -638,7 +648,7 @@ export function Landing({ onEnter }: LandingProps) {
                 </div>
               </div>
 
-              {/* Waypoint Way-markers (Visual nod to the dots in reference image) */}
+              {/* Waypoint Way-markers */}
               <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/[0.06] text-[10px] text-[#94A3B8]">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#3B82F6] inline-block shadow-[0_0_6px_#3B82F6]" />
@@ -670,8 +680,42 @@ export function Landing({ onEnter }: LandingProps) {
           </div>
         </div>
 
-        {/* 5. SATQUERY 5-CARD HORIZONTAL MODULE TILES */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-8 mb-6" aria-label="Feature modules">
+        {/* Scroll Indicator Prompt */}
+        <div className="flex justify-center mt-6">
+          <a
+            href="#modules"
+            className="flex flex-col items-center gap-1.5 text-xs text-[#94A3B8] hover:text-[#5FE38A] transition-colors py-2 px-4 rounded-full bg-white/[0.02] border border-white/[0.06] backdrop-blur-md"
+          >
+            <span className="font-mono text-[10px] uppercase tracking-widest">Explore Ocean Intelligence Modules</span>
+            <ChevronDown size={14} className="animate-bounce text-[#5FE38A]" />
+          </a>
+        </div>
+      </section>
+
+      {/* 5. SATQUERY 5-CARD HORIZONTAL MODULE TILES (SECTION #MODULES) */}
+      <section id="modules" className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 py-12 border-t border-white/[0.06]">
+        <div className="flex items-end justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-4 h-0.5 bg-[#5FE38A] rounded-full inline-block" />
+              <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-[#94A3B8] uppercase">
+                INTEGRATED SUITE
+              </span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+              Operational Command Modules
+            </h2>
+          </div>
+          <button
+            onClick={() => onEnter('dashboard')}
+            className="hidden sm:flex items-center gap-2 text-xs font-medium text-[#5FE38A] hover:underline"
+          >
+            <span>Open All in Command Deck</span>
+            <ArrowRight size={13} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 mb-8" aria-label="Feature modules">
           {featureCards.map((card) => {
             const Icon = card.icon;
             return (
@@ -700,10 +744,10 @@ export function Landing({ onEnter }: LandingProps) {
               </button>
             );
           })}
-        </section>
+        </div>
 
-        {/* 6. OCEANOGRAPHIC STATS SUMMARY RIBBON */}
-        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] backdrop-blur-xl">
+        {/* Oceanographic Stats Summary Ribbon */}
+        <div className="flex flex-wrap items-center justify-between gap-6 p-6 rounded-2xl bg-[#09121C]/80 border border-white/[0.08] backdrop-blur-xl shadow-2xl">
           <div className="flex items-center gap-6 flex-wrap">
             <div className="stat-col">
               <strong>10,001</strong>
@@ -712,7 +756,7 @@ export function Landing({ onEnter }: LandingProps) {
             <div className="stat-divider" />
             <div className="stat-col">
               <strong className="stat-accent">1.42 kn</strong>
-              <span>Copernicus Drift Drift</span>
+              <span>Copernicus Drift</span>
             </div>
             <div className="stat-divider" />
             <div className="stat-col">
@@ -739,7 +783,328 @@ export function Landing({ onEnter }: LandingProps) {
             <ArrowRight size={13} />
           </button>
         </div>
-      </main>
+      </section>
+
+      {/* 6. DEEP DIVE: THREE CORE OCEANIC SURVEILLANCE ENGINES (SECTION #ENGINES) */}
+      <section id="engines" className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 py-16 border-t border-white/[0.06]">
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#5FE38A]/10 border border-[#5FE38A]/30 text-[#5FE38A] text-xs font-mono uppercase tracking-wider mb-3">
+            <Cpu size={13} />
+            <span>Multi-Sensor Sensor Fusion</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-4">
+            How SagarDrishti Detects & Attributes Marine Discharges
+          </h2>
+          <p className="text-sm md:text-base text-[#94A3B8] leading-relaxed">
+            Combining orbital radar physics with hydrodynamic Lagrangian simulations and AIS kinematic anomaly detection to generate court-ready evidence dossiers.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Engine 1: SAR Neural Segmentation */}
+          <div className="p-6 md:p-8 rounded-2xl bg-[#09121C]/80 border border-white/[0.08] backdrop-blur-xl hover:border-[#5FE38A]/40 transition-all group">
+            <div className="w-12 h-12 rounded-xl bg-[#5FE38A]/10 border border-[#5FE38A]/30 flex items-center justify-center text-[#5FE38A] mb-5 group-hover:scale-105 transition-transform">
+              <Radar size={24} />
+            </div>
+            <div className="text-[11px] font-mono text-[#5FE38A] uppercase tracking-wider mb-1">
+              ENGINE 01 · RADAR PHYSICS
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">
+              Sentinel-1 SAR C-Band Neural Segmentation
+            </h3>
+            <p className="text-sm text-[#94A3B8] leading-relaxed mb-5">
+              PyTorch U-Net++ with ResNet-34 encoder analyzes 5.405 GHz dual-polarization (VV/VH) radar backscatter damping. Differentiates genuine mineral crude oil from biogenic lookalikes with 94.2% precision.
+            </p>
+            <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono text-[#CBD5E1]">
+              <span>Inference Time</span>
+              <span className="text-[#5FE38A] font-bold">380 ms / tile</span>
+            </div>
+          </div>
+
+          {/* Engine 2: Copernicus Reverse Trajectory */}
+          <div className="p-6 md:p-8 rounded-2xl bg-[#09121C]/80 border border-white/[0.08] backdrop-blur-xl hover:border-[#5BC0BE]/40 transition-all group">
+            <div className="w-12 h-12 rounded-xl bg-[#5BC0BE]/10 border border-[#5BC0BE]/30 flex items-center justify-center text-[#5BC0BE] mb-5 group-hover:scale-105 transition-transform">
+              <Waves size={24} />
+            </div>
+            <div className="text-[11px] font-mono text-[#5BC0BE] uppercase tracking-wider mb-1">
+              ENGINE 02 · HYDRODYNAMICS
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">
+              Copernicus 4D Reverse Drift Backtracking
+            </h3>
+            <p className="text-sm text-[#94A3B8] leading-relaxed mb-5">
+              Lagrangian particle advection simulates ocean currents, Stokes wave drift, and 3% Ekman windage backward in time up to 72 hours. Pinpoints the spatio-temporal cone where the discharge occurred.
+            </p>
+            <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono text-[#CBD5E1]">
+              <span>Model Integration</span>
+              <span className="text-[#5BC0BE] font-bold">CMEMS Global 0.083°</span>
+            </div>
+          </div>
+
+          {/* Engine 3: Dark Fleet & AIS Telemetry */}
+          <div className="p-6 md:p-8 rounded-2xl bg-[#09121C]/80 border border-white/[0.08] backdrop-blur-xl hover:border-[#F59E0B]/40 transition-all group">
+            <div className="w-12 h-12 rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/30 flex items-center justify-center text-[#F59E0B] mb-5 group-hover:scale-105 transition-transform">
+              <Radio size={24} />
+            </div>
+            <div className="text-[11px] font-mono text-[#F59E0B] uppercase tracking-wider mb-1">
+              ENGINE 03 · KINEMATICS
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">
+              Dark Fleet Kinematics & AIS Anomaly Scoring
+            </h3>
+            <p className="text-sm text-[#94A3B8] leading-relaxed mb-5">
+              Scans 10,001+ commercial vessel tracks for transponder blackouts, mid-ocean loitering, draught change anomalies (illegal ship-to-ship transfers), and cross-matches historical trajectory cones.
+            </p>
+            <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono text-[#CBD5E1]">
+              <span>Fleet Telemetry</span>
+              <span className="text-[#F59E0B] font-bold">10,001 Active MMSIs</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. LIVE MARITIME CHOKEPOINT TELEMETRY MATRIX (SECTION #TELEMETRY) */}
+      <section id="telemetry" className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 py-16 border-t border-white/[0.06]">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="w-4 h-0.5 bg-[#5FE38A] rounded-full inline-block" />
+              <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-[#94A3B8] uppercase">
+                GLOBAL CHOKEPOINTS
+              </span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+              Live Oceanic Surveillance Corridors
+            </h2>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono text-[#94A3B8]">
+            <span className="w-2 h-2 rounded-full bg-[#5FE38A] animate-pulse" />
+            <span>TELEMETRY INGESTION ACTIVE · REFRESH 5s</span>
+          </div>
+        </div>
+
+        {/* Chokepoint Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[
+            {
+              corridor: 'Singapore Strait TSS',
+              sub: 'Traffic Separation Scheme',
+              coords: "01° 15' N, 103° 48' E",
+              drift: '1.42 kn @ 118° ESE',
+              depth: '-24.5 m (Shelf)',
+              tankers: 412,
+              status: 'CRITICAL ATTENTION',
+              statusColor: 'text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/30',
+              pass: 'Sentinel-1C in 14m',
+            },
+            {
+              corridor: 'Strait of Malacca',
+              sub: 'One Fathom Bank Chokepoint',
+              coords: "02° 53' N, 101° 00' E",
+              drift: '1.85 kn @ 305° NW',
+              depth: '-38.0 m (Channel)',
+              tankers: 588,
+              status: 'ELEVATED SURVEILLANCE',
+              statusColor: 'text-[#F59E0B] bg-[#F59E0B]/10 border-[#F59E0B]/30',
+              pass: 'Sentinel-1A ingested',
+            },
+            {
+              corridor: 'Sunda Strait',
+              sub: 'Java Sea to Indian Ocean',
+              coords: "05° 55' S, 105° 53' E",
+              drift: '2.10 kn @ 195° SSW',
+              depth: '-120 m (Deep Trench)',
+              tankers: 176,
+              status: 'NOMINAL FLOW',
+              statusColor: 'text-[#5FE38A] bg-[#5FE38A]/10 border-[#5FE38A]/30',
+              pass: 'Sentinel-1B in 2h 40m',
+            },
+            {
+              corridor: 'Bab-el-Mandeb & Red Sea',
+              sub: 'Gulf of Aden Transit',
+              coords: "12° 35' N, 043° 20' E",
+              drift: '1.15 kn @ 045° NE',
+              depth: '-185 m (Abyssal Trench)',
+              tankers: 320,
+              status: 'HIGH ALERT (DARK AIS)',
+              statusColor: 'text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/30',
+              pass: 'SAR Acquisition Ready',
+            },
+          ].map((item) => (
+            <div
+              key={item.corridor}
+              className="p-5 rounded-xl bg-[#09121C]/80 border border-white/[0.08] backdrop-blur-xl hover:border-white/[0.2] transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-full border ${item.statusColor}`}>
+                    {item.status}
+                  </span>
+                  <span className="text-[10px] font-mono text-[#64748B]">{item.pass}</span>
+                </div>
+                <h4 className="text-base font-bold text-white mb-0.5">{item.corridor}</h4>
+                <div className="text-[11px] text-[#94A3B8] mb-4">{item.sub}</div>
+
+                <div className="space-y-2 text-xs font-mono mb-4">
+                  <div className="flex justify-between text-[#94A3B8] border-b border-white/[0.04] pb-1.5">
+                    <span>Coordinates</span>
+                    <span className="text-[#CBD5E1]">{item.coords}</span>
+                  </div>
+                  <div className="flex justify-between text-[#94A3B8] border-b border-white/[0.04] pb-1.5">
+                    <span>Surface Drift</span>
+                    <span className="text-[#5FE38A] font-bold">{item.drift}</span>
+                  </div>
+                  <div className="flex justify-between text-[#94A3B8] border-b border-white/[0.04] pb-1.5">
+                    <span>Depth Clearance</span>
+                    <span className="text-[#5BC0BE]">{item.depth}</span>
+                  </div>
+                  <div className="flex justify-between text-[#94A3B8]">
+                    <span>Active Tankers</span>
+                    <span className="text-white font-bold">{item.tankers}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => onEnter('vessels')}
+                className="w-full py-2 px-3 rounded-lg bg-white/[0.04] hover:bg-[#5FE38A] hover:text-[#060B10] text-[#CBD5E1] text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+              >
+                <span>Track Corridor Fleet</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 8. OPERATIONAL WORKFLOW: FROM SAR INGESTION TO LEGAL EVIDENCE (SECTION #WORKFLOW) */}
+      <section id="workflow" className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 py-16 border-t border-white/[0.06]">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#5BC0BE]/10 border border-[#5BC0BE]/30 text-[#5BC0BE] text-xs font-mono uppercase tracking-wider mb-3">
+            <FileCheck2 size={13} />
+            <span>Evidence Pipeline</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-3">
+            5-Stage Attribution Workflow
+          </h2>
+          <p className="text-sm text-[#94A3B8]">
+            Automated intelligence pipeline transforming raw satellite telemetry into legally binding maritime enforcement dossiers.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {[
+            {
+              step: '01',
+              title: 'Satellite Ingest',
+              desc: 'Automated retrieval of Sentinel-1 C-Band SAR GRD / SLC granules via Copernicus Open Access API.',
+              icon: Radar,
+            },
+            {
+              step: '02',
+              title: 'Neural Mask',
+              desc: 'PyTorch U-Net++ infers pixel-level discharge contours with dB backscatter contrast calculation.',
+              icon: ScanEye,
+            },
+            {
+              step: '03',
+              title: 'Drift Backtrack',
+              desc: 'Lagrangian 4D particle advection simulates reverse current vectors to identify the release time-window.',
+              icon: Waves,
+            },
+            {
+              step: '04',
+              title: 'AIS Attribution',
+              desc: 'Intersects reverse drift cone with historical trajectory logs across 10,001 vessels to isolate prime suspect.',
+              icon: Radio,
+            },
+            {
+              step: '05',
+              title: 'Court Dossier',
+              desc: 'Exports cryptographic evidence packet containing timestamped imagery, MMSI data, and trajectory proofs.',
+              icon: FileCheck2,
+            },
+          ].map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.step}
+                className="relative p-5 rounded-xl bg-[#09121C]/80 border border-white/[0.08] backdrop-blur-xl flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-2xl font-black font-mono text-[#5FE38A]/60">
+                      {item.step}
+                    </span>
+                    <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center text-[#5FE38A]">
+                      <Icon size={16} />
+                    </div>
+                  </div>
+                  <h4 className="text-base font-bold text-white mb-2">{item.title}</h4>
+                  <p className="text-xs text-[#94A3B8] leading-relaxed">{item.desc}</p>
+                </div>
+                {idx < 4 && (
+                  <div className="hidden lg:block absolute -right-2.5 top-1/2 -translate-y-1/2 z-20 text-[#5FE38A]">
+                    <ChevronRight size={16} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 9. BOTTOM COMMAND CENTER LAUNCH BANNER & FOOTER */}
+      <section className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 py-16 border-t border-white/[0.06]">
+        <div className="p-8 md:p-12 rounded-3xl bg-gradient-to-br from-[#0D1720] via-[#09121C] to-[#060B10] border border-[#5FE38A]/30 shadow-[0_0_50px_rgba(95,227,138,0.12)] flex flex-col lg:flex-row items-center justify-between gap-8">
+          <div className="max-w-2xl text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#5FE38A]/10 border border-[#5FE38A]/30 text-[#5FE38A] text-xs font-mono uppercase tracking-wider mb-4">
+              <Shield size={13} />
+              <span>Operational Status: Ready</span>
+            </div>
+            <h3 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-3">
+              Ready to Monitor the High Seas?
+            </h3>
+            <p className="text-sm md:text-base text-[#94A3B8] leading-relaxed">
+              Launch SagarDrishti to access live Sentinel-1 SAR telemetry, track 10,001 commercial vessels, and initiate reverse drift trajectory simulations.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+            <button
+              onClick={() => onEnter('dashboard')}
+              className="btn-sat-primary px-6 py-3.5 text-sm font-bold flex items-center gap-2"
+            >
+              <span>Launch Command Center</span>
+              <ArrowRight size={16} />
+            </button>
+            <button
+              onClick={() => onEnter('spill-detection')}
+              className="btn-sat-ghost px-5 py-3.5 text-xs font-semibold"
+            >
+              <span>Inspect SAR Inference AI</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tactical Footer */}
+        <footer className="flex flex-col md:flex-row items-center justify-between pt-12 pb-6 text-xs text-[#64748B] gap-4">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-white tracking-tight">SagarDrishti</span>
+            <span>·</span>
+            <span>Maritime & Ocean Intelligence System</span>
+            <span>·</span>
+            <span className="text-[#5FE38A] font-mono">v2.4.0-PROD</span>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <a href="#hero" className="hover:text-white transition-colors">Back to Top ↑</a>
+            <button onClick={() => onEnter('dashboard')} className="hover:text-white transition-colors">Command Center</button>
+            <button onClick={() => onEnter('vessels')} className="hover:text-white transition-colors">AIS Fleet Track</button>
+            <button onClick={() => onEnter('spill-detection')} className="hover:text-white transition-colors">SAR AI Analysis</button>
+          </div>
+        </footer>
+      </section>
     </div>
   );
 }
