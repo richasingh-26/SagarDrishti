@@ -476,19 +476,16 @@ async def detect_spill_upload(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Image inference error: {str(e)}")
 
-@app.post("/api/gemma-analyze")
-async def gemma_analyze(file: UploadFile = File(...)):
-    contents = await file.read()
+async def _run_gemma_inference(contents: bytes) -> dict:
     prompt = "You are an elite Maritime Forensic AI. Analyze this SAR image for oil spills. Describe the dark patches (spill size, shape, severity). Recommend immediate containment actions."
     try:
         # Open image with PIL and normalise to visible 8-bit range before sending to Gemma
-        # This handles TIFF/GeoTIFF SAR files, PNG, JPEG, etc.
         pil_img = Image.open(io.BytesIO(contents))
 
         # Convert to float array for normalisation
         arr = np.asarray(pil_img, dtype=np.float32)
         if arr.ndim == 3 and arr.shape[2] > 3:
-            arr = arr[:, :, :3]   # drop extra channels (e.g. alpha or extra SAR bands)
+            arr = arr[:, :, :3]   # drop extra channels
         elif arr.ndim == 2:
             arr = np.stack([arr, arr, arr], axis=2)  # greyscale → RGB
 
@@ -496,7 +493,7 @@ async def gemma_analyze(file: UploadFile = File(...)):
         arr_min, arr_max = arr.min(), arr.max()
         arr_norm = ((arr - arr_min) / (arr_max - arr_min + 1e-8) * 255).astype(np.uint8)
 
-        # Resize to a reasonable size for the API (max 1024px)
+        # Resize to max 1024px
         display_img = Image.fromarray(arr_norm).convert("RGB")
         display_img.thumbnail((1024, 1024), Image.LANCZOS)
 
@@ -508,7 +505,7 @@ async def gemma_analyze(file: UploadFile = File(...)):
         if ai_client is None:
             return {"status": "error", "message": "GEMINI_API_KEY environment variable is not configured"}
 
-        # Attempt inference with Gemma 4, fallback gracefully to Gemini 3 Flash Preview if busy
+        # Attempt inference with Gemma 4, fallback to Gemini 3 Flash Preview if busy
         report_text = None
         last_err = None
         for model_name in ["gemma-4-26b-a4b-it", "gemini-3-flash-preview"]:
@@ -530,6 +527,25 @@ async def gemma_analyze(file: UploadFile = File(...)):
             return {"status": "error", "message": f"AI vision analysis failed: {last_err}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@app.post("/api/gemma-analyze")
+async def gemma_analyze(file: Optional[UploadFile] = File(None)):
+    if file is None:
+        if not os.path.exists(SAR_FILE):
+            return {"status": "error", "message": "No active Sentinel-1 SAR image found in system"}
+        with open(SAR_FILE, "rb") as f:
+            contents = f.read()
+    else:
+        contents = await file.read()
+    return await _run_gemma_inference(contents)
+
+@app.get("/api/gemma-analyze")
+async def gemma_analyze_get():
+    if not os.path.exists(SAR_FILE):
+        return {"status": "error", "message": "No active Sentinel-1 SAR image found in system"}
+    with open(SAR_FILE, "rb") as f:
+        contents = f.read()
+    return await _run_gemma_inference(contents)
 
 # U-Net++ GET endpoint (Local SAR image evaluation)
 @app.get("/api/detect")
