@@ -6,13 +6,9 @@ import {
   TrendingUp,
   SlidersHorizontal,
   Compass,
-  Sparkles,
-  Moon,
-  Sun,
-  Palette,
+  Globe,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useTheme } from '@/context/ThemeContext';
 
 export type PageId =
   | 'dashboard'
@@ -26,7 +22,6 @@ export type PageId =
 interface NavItem {
   id: PageId;
   label: string;
-  sub?: string;
   icon: LucideIcon;
   badge?: number;
   goldStar?: boolean;
@@ -38,18 +33,17 @@ interface SidebarProps {
   onNavigate: (page: PageId) => void;
   anomalyCount: number;
   alertCount?: number;
-  onOpenGuide?: () => void;
+  onOpenLanding?: () => void;
 }
 
-export function Sidebar({ active, onNavigate, anomalyCount, onOpenGuide }: SidebarProps) {
-  const { theme, setTheme } = useTheme();
+export function Sidebar({ active, onNavigate, anomalyCount, onOpenLanding }: SidebarProps) {
   const items: NavItem[] = [
-    { id: 'dashboard', label: 'Command Center', sub: 'Overview & Sea Map', icon: LayoutDashboard },
-    { id: 'vessels', label: 'AIS Fleet Track', sub: '10,001 Live Ships', icon: Ship, badge: anomalyCount },
-    { id: 'spill-detection', label: 'SAR AI Analysis', sub: 'Satellite Radar & AI', icon: ScanEye },
-    { id: 'fleet-builder', label: 'Custom Ship Studio', sub: 'Simulate Ships', icon: SlidersHorizontal, isNew: true },
-    { id: 'scenario-builder', label: 'Drift Simulator', sub: 'Currents & Winds', icon: FlaskConical },
-    { id: 'prediction', label: 'Spill Forecast', sub: '48h Movement Model', icon: TrendingUp },
+    { id: 'dashboard', label: 'Command Center', icon: LayoutDashboard },
+    { id: 'vessels', label: 'AIS Fleet Track', icon: Ship, badge: anomalyCount },
+    { id: 'spill-detection', label: 'SAR AI Analysis', icon: ScanEye },
+    { id: 'fleet-builder', label: 'Custom Ship Studio', icon: SlidersHorizontal, isNew: true },
+    { id: 'scenario-builder', label: 'Drift Simulator', icon: FlaskConical },
+    { id: 'prediction', label: 'Spill Forecast', icon: TrendingUp },
   ];
 
   return (
@@ -58,6 +52,19 @@ export function Sidebar({ active, onNavigate, anomalyCount, onOpenGuide }: Sideb
         <span className="section-label">MISSION VIEWS</span>
         <span className="text-[10px] text-[#5FE38A] font-mono font-semibold">LIVE</span>
       </div>
+
+      {onOpenLanding && (
+        <div className="px-3 mb-2">
+          <button
+            onClick={onOpenLanding}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#5FE38A] bg-[#5FE38A]/10 border border-[#5FE38A]/30 hover:bg-[#5FE38A]/20 transition-all shadow-[0_0_15px_rgba(95,227,138,0.15)] group cursor-pointer"
+            title="Switch to 3D Earth Globe Portal"
+          >
+            <Globe size={15} className="group-hover:rotate-45 transition-transform shrink-0" />
+            <span className="truncate">3D Earth Globe</span>
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-3 space-y-1">
         {items.map((item) => {
@@ -77,14 +84,7 @@ export function Sidebar({ active, onNavigate, anomalyCount, onOpenGuide }: Sideb
                 size={17}
                 className={isActive ? 'text-[#5FE38A]' : 'text-[#64748B]'}
               />
-              <div className="flex-1 min-w-0">
-                <span className="block truncate leading-snug">{item.label}</span>
-                {item.sub && (
-                  <span className="block text-[10px] text-[#64748B] font-normal leading-tight truncate">
-                    {item.sub}
-                  </span>
-                )}
-              </div>
+              <span className="flex-1 truncate">{item.label}</span>
               {item.isNew && (
                 <span className="px-1.5 py-0.5 rounded-full text-[0.5625rem] font-bold bg-[#D8B4FE]/15 text-[#D8B4FE] border border-[#D8B4FE]/30">
                   NEW
@@ -98,64 +98,6 @@ export function Sidebar({ active, onNavigate, anomalyCount, onOpenGuide }: Sideb
             </button>
           );
         })}
-      </div>
-
-      {/* Quick Non-Technical Guide Button */}
-      <div className="mx-3 mb-2">
-        <button
-          onClick={onOpenGuide}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-[#5FE38A] bg-[#5FE38A]/10 hover:bg-[#5FE38A]/20 border border-[#5FE38A]/35 transition-all shadow-[0_0_12px_rgba(95,227,138,0.12)] cursor-pointer group"
-          title="How SagarDrishti Works (30-Second Plain-English Guide)"
-        >
-          <Sparkles size={13} className="text-[#5FE38A] group-hover:rotate-12 transition-transform" />
-          <span>How It Works (Guide)</span>
-        </button>
-      </div>
-
-      {/* Theme Switcher */}
-      <div className="mx-3 mb-2 p-2 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-1.5">
-        <div className="flex items-center justify-between text-[10px] px-1">
-          <span className="section-label">SYSTEM THEME</span>
-          <Palette size={11} className="text-[#5FE38A]" />
-        </div>
-        <div className="grid grid-cols-3 gap-1 p-0.5 rounded-lg bg-black/20 border border-white/[0.06]">
-          <button
-            onClick={() => setTheme('default')}
-            className={`py-1 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-              theme === 'default'
-                ? 'bg-[#5FE38A] text-[#060B10] shadow-sm'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-            title="Default Oceanic Cyberpunk"
-          >
-            <Sparkles size={10} />
-            <span>Def</span>
-          </button>
-          <button
-            onClick={() => setTheme('black')}
-            className={`py-1 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-              theme === 'black'
-                ? 'bg-[#5FE38A] text-[#060B10] shadow-sm'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-            title="Pitch Black OLED"
-          >
-            <Moon size={10} />
-            <span>Blk</span>
-          </button>
-          <button
-            onClick={() => setTheme('white')}
-            className={`py-1 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-              theme === 'white'
-                ? 'bg-[#10B981] text-white shadow-sm'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-            title="Daylight White"
-          >
-            <Sun size={10} />
-            <span>Wht</span>
-          </button>
-        </div>
       </div>
 
       {/* Case Footer Card (SatQuery Info Card style) */}

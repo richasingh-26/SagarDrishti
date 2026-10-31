@@ -38,13 +38,17 @@ interface LandingProps {
 type OceanMode = 'currents' | 'ais' | 'sar' | 'bathymetry';
 
 export function Landing({ onEnter }: LandingProps) {
-
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeOceanMode, setActiveOceanMode] = useState<OceanMode>('currents');
   const [selectedHotspot, setSelectedHotspot] = useState<string>('singapore');
 
-
-  
+  // Keep video looping seamlessly
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +170,17 @@ export function Landing({ onEnter }: LandingProps) {
     <div className="relative min-h-screen w-full bg-[#060B10] text-white font-sans">
       {/* 1. 4K LOOPING EARTH VIDEO GLOBE (FIXED PINNED BACKGROUND) */}
       <div className="site-video-background" aria-hidden="true">
-        
+        <video
+          ref={videoRef}
+          className="site-video-element"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          src="/home.mp4"
+          onEnded={(e) => (e.target as HTMLVideoElement).play().catch(() => {})}
+        />
         <div className="site-video-overlay" />
       </div>
 

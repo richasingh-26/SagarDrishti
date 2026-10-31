@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Activity, Radio, Brain, Zap, Globe, Shield, User, Sparkles, Moon, Sun } from 'lucide-react';
+import { Activity, Radio, Brain, Zap, Globe, Shield, User } from 'lucide-react';
 import { StatusDot } from './StatusDot';
 import type { PageId } from './Sidebar';
-import { useTheme } from '@/context/ThemeContext';
 
 interface CommandBarProps {
   online: boolean;
@@ -13,7 +12,6 @@ interface CommandBarProps {
   onNavigate: (page: PageId) => void;
   onInvestigate: () => void;
   onOpenLanding?: () => void;
-  onOpenGuide?: () => void;
 }
 
 export function CommandBar({
@@ -25,9 +23,7 @@ export function CommandBar({
   onNavigate,
   onInvestigate,
   onOpenLanding,
-  onOpenGuide,
 }: CommandBarProps) {
-  const { theme, setTheme } = useTheme();
   const [clock, setClock] = useState('');
 
   useEffect(() => {
@@ -56,7 +52,7 @@ export function CommandBar({
         <button
           onClick={onOpenLanding}
           className="flex items-center gap-2.5 group text-left transition-transform hover:scale-[1.02]"
-          title="SagarDrishti Maritime Command Center"
+          title="Return to 3D Earth Mission Portal"
         >
           {/* Orbital Orbit Ring Logo */}
           <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
@@ -95,7 +91,7 @@ export function CommandBar({
         </button>
 
         {/* SatQuery Capsule Nav Links */}
-        <nav className="hidden 2xl:flex items-center gap-1.5 pl-2">
+        <nav className="hidden lg:flex items-center gap-1.5 pl-2">
           {navTabs.map((tab) => {
             const isActive = activePage === tab.id;
             return (
@@ -149,73 +145,34 @@ export function CommandBar({
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto">
-        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="hidden md:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
           <Activity size={11} className="text-[#5FE38A]" />
           <span className="font-mono text-[11px] text-[#94A3B8]">{clock}</span>
         </div>
 
-        {/* Interactive Theme Switcher (Default / Black / White) */}
-        <div className="flex items-center p-0.5 rounded-full bg-white/[0.05] border border-white/[0.12] shrink-0">
+        {onOpenLanding && (
           <button
-            onClick={() => setTheme('default')}
-            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-              theme === 'default'
-                ? 'bg-[#5FE38A] text-[#060B10] shadow-[0_2px_8px_rgba(95,227,138,0.3)]'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-            title="Default Oceanic Cyberpunk Theme"
+            onClick={onOpenLanding}
+            className="btn-sat-ghost text-xs flex items-center gap-1.5 border border-[#5FE38A]/30 bg-[#5FE38A]/10 hover:bg-[#5FE38A]/20 transition-all"
+            title="3D Earth Satellite View"
           >
-            <Sparkles size={11} />
-            <span className="text-[10px] font-mono">DEF</span>
+            <Globe size={13} className="text-[#5FE38A]" />
+            <span>3D Earth</span>
           </button>
-          <button
-            onClick={() => setTheme('black')}
-            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-              theme === 'black'
-                ? 'bg-[#5FE38A] text-[#060B10] shadow-[0_2px_8px_rgba(95,227,138,0.3)]'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-            title="Stealth OLED Pitch Black Theme"
-          >
-            <Moon size={11} />
-            <span className="text-[10px] font-mono">BLK</span>
-          </button>
-          <button
-            onClick={() => setTheme('white')}
-            className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-              theme === 'white'
-                ? 'bg-[#10B981] text-white shadow-[0_2px_8px_rgba(16,185,129,0.3)]'
-                : 'text-[#94A3B8] hover:text-white'
-            }`}
-            title="Daylight Clean White Theme"
-          >
-            <Sun size={11} />
-            <span className="text-[10px] font-mono">WHT</span>
-          </button>
-        </div>
+        )}
 
-        {/* Quick 30-Second Guide for Non-Technical Visitors */}
-        <button
-          onClick={onOpenGuide}
-          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#5FE38A]/15 hover:bg-[#5FE38A]/25 text-[#5FE38A] border border-[#5FE38A]/40 text-xs font-bold transition-all shadow-[0_0_15px_rgba(95,227,138,0.2)] cursor-pointer group"
-          title="How SagarDrishti Works (30-Second Guide in Plain English)"
-        >
-          <Sparkles size={13} className="group-hover:rotate-12 transition-transform text-[#5FE38A]" />
-          <span>How It Works</span>
-        </button>
-
-        <button onClick={onInvestigate} className="btn-sat-primary whitespace-nowrap text-xs px-3 py-1.5">
-          <Shield size={13} />
-          <span className="hidden sm:inline">Forensic Pass</span>
+        <button onClick={onInvestigate} className="btn-sat-primary">
+          <Shield size={14} />
+          <span>Full Forensic Pass</span>
         </button>
 
         {/* SatQuery User Profile Circle */}
         <button
-          className="w-8 h-8 rounded-full bg-white/[0.04] hover:bg-[#5FE38A]/10 border border-white/[0.15] hover:border-[#5FE38A] text-[#CBD5E1] hover:text-[#5FE38A] flex items-center justify-center transition-all cursor-pointer shrink-0"
+          className="w-9 h-9 rounded-full bg-white/[0.04] hover:bg-[#5FE38A]/10 border border-white/[0.15] hover:border-[#5FE38A] text-[#CBD5E1] hover:text-[#5FE38A] flex items-center justify-center transition-all cursor-pointer"
           title="Security Clearance: Level 4"
         >
-          <User size={15} />
+          <User size={16} />
         </button>
       </div>
     </header>

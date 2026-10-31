@@ -9,15 +9,13 @@ import { FuturePrediction } from '@/pages/FuturePrediction';
 import { SpillDetection } from '@/pages/SpillDetection';
 import { FleetBuilder } from '@/pages/FleetBuilder';
 import { Landing } from '@/pages/Landing';
-import { QuickGuideModal } from '@/components/QuickGuideModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import type { Vessel } from '@/lib/api';
 
 function App() {
-  const [inLanding, setInLanding] = useState(false);
+  const [inLanding, setInLanding] = useState(true);
   const [page, setPage] = useState<PageId>('dashboard');
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const {
     online,
     health,
@@ -69,13 +67,12 @@ function App() {
         onNavigate={setPage}
         onInvestigate={handleInvestigate}
         onOpenLanding={() => setInLanding(true)}
-        onOpenGuide={() => setIsGuideOpen(true)}
       />
       <Sidebar
         active={page}
         onNavigate={setPage}
         anomalyCount={anomalyCount}
-        onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenLanding={() => setInLanding(true)}
       />
       <main className="flex-1 ml-60 mt-16 overflow-hidden">
         <ErrorBoundary fallbackTitle={`Recovered view: ${page}`}>
@@ -118,11 +115,6 @@ function App() {
           </div>
         </ErrorBoundary>
       </main>
-      <QuickGuideModal
-        isOpen={isGuideOpen}
-        onClose={() => setIsGuideOpen(false)}
-        onNavigate={handleNavigate}
-      />
     </div>
   );
 }
