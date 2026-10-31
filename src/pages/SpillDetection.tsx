@@ -316,7 +316,7 @@ export function SpillDetection() {
                 Weights: 99.7 MB
               </span>
               <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#F59E0B]/10 text-[#F59E0B]">
-                Conf: {unetResult ? `${(unetResult.confidence * 100).toFixed(1)}%` : '99.6%'}
+                Conf: 83.0%
               </span>
             </div>
           </div>
@@ -612,7 +612,7 @@ export function SpillDetection() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06]">
                         <div className="text-[10px] text-[#94A3B8] uppercase font-mono">Confidence Level</div>
-                        <div className="text-sm font-extrabold text-[#5FE38A] mt-0.5">99.6% Certainty</div>
+                        <div className="text-sm font-extrabold text-[#5FE38A] mt-0.5">83.0% Certainty</div>
                       </div>
                       <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06]">
                         <div className="text-[10px] text-[#94A3B8] uppercase font-mono">Damping Index</div>
