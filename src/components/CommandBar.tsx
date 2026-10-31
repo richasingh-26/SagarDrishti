@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, Radio, Brain, Zap } from 'lucide-react';
+import { Activity, Radio, Brain, Zap, Anchor } from 'lucide-react';
 import { StatusDot } from './StatusDot';
 import type { PageId } from './Sidebar';
 
@@ -41,19 +41,21 @@ export function CommandBar({
       {/* Brand */}
       <button
         onClick={onOpenLanding}
-        className="flex items-center gap-2.5 shrink-0 group"
+        className="flex items-center gap-2 shrink-0 group"
         title="Return to 3D Earth"
       >
-        <div className="w-8 h-8 rounded-lg bg-black border border-white/10 flex items-center justify-center p-1 group-hover:border-[#5BC0BE]/50 transition-colors shadow-sm">
-          <img
-            src="/graviton-logo.png"
-            alt="Graviton"
-            className="w-full h-full object-contain"
-          />
-        </div>
+        <Anchor size={18} className="text-[#5BC0BE] group-hover:rotate-12 transition-transform" />
         <span className="text-[15px] font-bold text-white tracking-tight">
           Sagar<span className="text-[#5BC0BE]">Drishti</span>
         </span>
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#5BC0BE]/15 text-[#5BC0BE] border border-[#5BC0BE]/30 ml-1">
+          <span>Graviton</span>
+          <img
+            src="/graviton-cropped.png"
+            alt="Graviton Logo"
+            className="h-4.5 w-auto max-h-[18px] object-contain"
+          />
+        </div>
       </button>
 
       {/* Center Status Indicators */}
