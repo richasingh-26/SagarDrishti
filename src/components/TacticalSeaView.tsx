@@ -5,6 +5,7 @@ import { ZoomIn, ZoomOut, RotateCcw, Waves, Play, Pause, Compass } from 'lucide-
 interface TacticalSeaViewProps {
   vessels: Vessel[];
   primeSuspectName?: string;
+  selectedMmsi?: string;
   onVesselClick?: (v: Vessel) => void;
 }
 
@@ -35,7 +36,7 @@ function generateWavePath(baseY: number, amplitude: number, frequency: number, p
   return points.join(' ');
 }
 
-export function TacticalSeaView({ vessels: propVessels, primeSuspectName, onVesselClick }: TacticalSeaViewProps) {
+export function TacticalSeaView({ vessels: propVessels, primeSuspectName, selectedMmsi, onVesselClick }: TacticalSeaViewProps) {
   const [fetchedVessels, setFetchedVessels] = useState<Vessel[]>([]);
   const [hovered, setHovered] = useState<HoverState | null>(null);
   
@@ -118,24 +119,60 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, onVess
   const { primeList, anomList, normalList } = useMemo(() => {
     const primes: Vessel[] = [];
     const anoms: Vessel[] = [];
-    const normals: Vessel[] = [];
+    const rawNormals: Vessel[] = [];
 
     for (const v of vessels) {
       if (typeof v.lat !== 'number' || typeof v.lon !== 'number' || !isFinite(v.lat) || !isFinite(v.lon)) {
         continue;
       }
-      const inBounds = v.lat >= 0.4 && v.lat <= 2.6 && v.lon >= 102.8 && v.lon <= 105.2;
+      const inBounds = v.lat >= 0.6 && v.lat <= 2.2 && v.lon >= 103.1 && v.lon <= 104.8;
+      if (!inBounds) continue;
 
       if (isPrime(v)) {
         primes.push(v);
       } else if (isAnomaly(v)) {
-        if (inBounds) anoms.push(v);
+        anoms.push(v);
       } else {
-        if (inBounds) normals.push(v);
+        rawNormals.push(v);
       }
     }
 
-    return { primeList: primes, anomList: anoms, normalList: normals };
+    // Realistic maritime distance calculation (Haversine formula in km)
+    const haversineDistKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371.0;
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+      return 2 * R * Math.asin(Math.sqrt(a));
+    };
+
+    // Sort normals by activity/speed to pick real active ships
+    const sortedNormals = [...rawNormals].sort((a, b) => (b.speed ?? 0) - (a.speed ?? 0));
+
+    // Spatial de-cluttering: enforce realistic ~1.8 km separation in TSS
+    // This prevents hundreds of vessels clumping together as an unrealistic blob
+    const declutteredNormals: Vessel[] = [];
+    const MIN_SEP_KM = 1.8;
+
+    for (const v of sortedNormals) {
+      const nearPrime = primes.some((p) => haversineDistKm(v.lat, v.lon, p.lat, p.lon) < 1.4);
+      const nearAnom = anoms.some((a) => haversineDistKm(v.lat, v.lon, a.lat, a.lon) < 1.4);
+      const nearNormal = declutteredNormals.some(
+        (n) => haversineDistKm(v.lat, v.lon, n.lat, n.lon) < MIN_SEP_KM
+      );
+
+      if (!nearPrime && !nearAnom && !nearNormal) {
+        declutteredNormals.push(v);
+      }
+      if (declutteredNormals.length >= 35) break;
+    }
+
+    return { primeList: primes, anomList: anoms, normalList: declutteredNormals };
   }, [vessels, isPrime, isAnomaly]);
 
   // Spill center ~55% x, 50% y with gentle hydrodynamic drift
@@ -491,38 +528,49 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, onVess
           PROBABLE ORIGIN ZONE
         </text>
 
-        {/* Dynamic AIS Commercial Fleet: Normal Vessels with subtle speed-based drift & stern wakes */}
+        {/* Dynamic AIS Commercial Fleet: Normal Vessels with real-time GPS coordinates & gentle surface drift */}
         {normalList.map((v, idx) => {
-          // Dynamic AIS dead-reckoning displacement
-          const speed = typeof v.speed === 'number' && v.speed > 0 ? v.speed : 12;
-          const vesselMove = (animTime * speed * 0.12 + idx * 5) % 40;
-          const x = lonToX(v.lon) + vesselMove;
-          const y = latToY(v.lat) + Math.sin(animTime * 0.5 + idx) * 1.5;
+          const isSelected = Boolean(selectedMmsi && (selectedMmsi === v.mmsi || selectedMmsi === v.name));
+          // Gentle realistic ocean water movement (< 1 px), preserving actual real-time coordinates
+          const x = lonToX(v.lon) + Math.sin(animTime * 0.8 + idx) * 0.6;
+          const y = latToY(v.lat) + Math.cos(animTime * 0.8 + idx) * 0.6;
 
           if (x < -20 || x > WIDTH + 20 || y < -20 || y > HEIGHT + 20) return null;
 
           return (
-            <g key={`norm-${v.mmsi || v.name}`}>
+            <g key={`norm-${v.mmsi || v.name}`} className="cursor-pointer">
               {/* Hydrodynamic stern wake trail */}
               <line
-                x1={x - 8}
+                x1={x - 7}
                 y1={y}
                 x2={x - 2}
                 y2={y}
                 stroke="#00D4FF"
                 strokeWidth="1"
-                strokeOpacity="0.35"
+                strokeOpacity="0.4"
                 strokeDasharray="3 2"
               />
+              {/* Selected highlight ring if chosen from suspect table */}
+              {isSelected && (
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={10}
+                  fill="none"
+                  stroke="#00D4FF"
+                  strokeWidth="1.5"
+                  className="animate-ping"
+                />
+              )}
               <circle
                 cx={x}
                 cy={y}
-                r={3.6}
-                fill="#00D4FF"
+                r={isSelected ? 4.8 : 3.6}
+                fill={isSelected ? '#FFFFFF' : '#00D4FF'}
                 stroke="#ffffff"
-                strokeWidth="0.8"
-                opacity="0.85"
-                className="cursor-pointer hover:opacity-100 hover:scale-125 transition-all"
+                strokeWidth={isSelected ? 1.5 : 0.8}
+                opacity={isSelected ? 1 : 0.85}
+                className="hover:opacity-100 hover:scale-125 transition-all"
                 onMouseEnter={(e) => handleVesselHover(v, e)}
                 onClick={() => onVesselClick?.(v)}
               />
@@ -532,10 +580,8 @@ export function TacticalSeaView({ vessels: propVessels, primeSuspectName, onVess
 
         {/* Dynamic AIS Anomalous Vessels with pulsing beacon and wake */}
         {anomList.map((v, idx) => {
-          const speed = typeof v.speed === 'number' && v.speed > 0 ? v.speed : 9;
-          const vesselMove = (animTime * speed * 0.09 + idx * 7) % 35;
-          const x = lonToX(v.lon) + vesselMove;
-          const y = latToY(v.lat) + Math.cos(animTime * 0.6 + idx) * 1.8;
+          const x = lonToX(v.lon) + Math.sin(animTime * 0.7 + idx) * 0.7;
+          const y = latToY(v.lat) + Math.cos(animTime * 0.7 + idx) * 0.7;
 
           if (x < -20 || x > WIDTH + 20 || y < -20 || y > HEIGHT + 20) return null;
 

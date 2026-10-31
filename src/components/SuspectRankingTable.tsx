@@ -19,6 +19,7 @@ import {
 interface SuspectRankingTableProps {
   initialSlickLat?: number;
   initialSlickLon?: number;
+  defaultShowControls?: boolean;
   onSelectVessel?: (mmsi: string, lat: number, lon: number) => void;
   onSimulate?: (name: string, lat: number, lon: number) => void;
 }
@@ -26,6 +27,7 @@ interface SuspectRankingTableProps {
 export function SuspectRankingTable({
   initialSlickLat = 1.25,
   initialSlickLon = 103.80,
+  defaultShowControls = true,
   onSelectVessel,
   onSimulate,
 }: SuspectRankingTableProps) {
@@ -33,9 +35,8 @@ export function SuspectRankingTable({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Controls state
-
-  const [showControls, setShowControls] = useState(false);
+  // Controls state - default open so parameters are immediately accessible & editable
+  const [showControls, setShowControls] = useState(defaultShowControls);
   const [slickLat, setSlickLat] = useState(initialSlickLat);
   const [slickLon, setSlickLon] = useState(initialSlickLon);
   const [backtrackHours, setBacktrackHours] = useState(8);
