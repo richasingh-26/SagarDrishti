@@ -28,6 +28,31 @@ from attribution import compute_top_suspect_ranking
 from google import genai
 from google.genai import types
 
+# ------------------------------------------------------------
+# Automatic .env Loader
+# ------------------------------------------------------------
+def _load_env_file():
+    candidates = [
+        os.path.join(os.getcwd(), ".env"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"),
+    ]
+    for p in candidates:
+        if os.path.isfile(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            k, v = k.strip(), v.strip().strip("'\"")
+                            if k not in os.environ or not os.environ[k]:
+                                os.environ[k] = v
+            except Exception:
+                pass
+
+_load_env_file()
+
 
 # Directory paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -319,8 +344,17 @@ app = FastAPI(
     description="Maritime Oil Spill Intelligence, AIS Tracking (10,000+ vessels) & Real U-Net++ Inference Engine",
 )
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+def get_genai_client():
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key:
+        return None
+    try:
+        return genai.Client(api_key=key)
+    except Exception as e:
+        print(f"[WARN] Failed to initialize genai.Client: {e}")
+        return None
+
+client = get_genai_client()
 
 app.add_middleware(
     CORSMiddleware,
@@ -470,14 +504,30 @@ async def gemma_analyze(file: UploadFile = File(...)):
         display_img.save(buf, format="JPEG", quality=85)
         jpeg_bytes = buf.getvalue()
 
-        if client is None:
+        ai_client = client or get_genai_client()
+        if ai_client is None:
             return {"status": "error", "message": "GEMINI_API_KEY environment variable is not configured"}
 
-        response = client.models.generate_content(
-            model="gemma-4-26b-a4b-it",
-            contents=[types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"), prompt],
-        )
-        return {"status": "success", "report": response.text}
+        # Attempt inference with Gemma 4, fallback gracefully to Gemini 3 Flash Preview if busy
+        report_text = None
+        last_err = None
+        for model_name in ["gemma-4-26b-a4b-it", "gemini-3-flash-preview"]:
+            try:
+                response = ai_client.models.generate_content(
+                    model=model_name,
+                    contents=[types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"), prompt],
+                )
+                if response and response.text:
+                    report_text = response.text
+                    break
+            except Exception as me:
+                last_err = me
+                continue
+
+        if report_text:
+            return {"status": "success", "report": report_text}
+        else:
+            return {"status": "error", "message": f"AI vision analysis failed: {last_err}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
