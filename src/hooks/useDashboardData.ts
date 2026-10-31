@@ -57,47 +57,71 @@ export function useDashboardData(): DashboardData {
   }, []);
 
   const fetchAll = useCallback(async () => {
+    // Health check
     try {
       const h = await getHealth();
       setHealth(h);
       setOnline(true);
+      if (h.sar_available) {
+        addEvent(`SAR file ready: ${h.sar_file || 'sentinel1_sar.tiff'}`, 'success');
+      }
     } catch {
       setOnline(false);
       setHealth(null);
     }
 
+    // Vessel AIS data
     try {
       const v = await getVessels();
       setVessels(v.vessels || []);
       setTotalVessels(v.total || 0);
       setAnomalyCount(v.anomalies || 0);
-      addEvent(`Backend online — ${(v.total || 0).toLocaleString()} vessels tracked`, 'success');
-      addEvent(`Vessel data refreshed — ${v.total} ships tracked`, 'info');
+      addEvent(
+        `AIS feed live — ${(v.total || 0).toLocaleString()} vessels tracked, ${v.anomalies || 0} anomalies flagged`,
+        'success'
+      );
     } catch {
-      addEvent('AIS feed fetch failed — using cached data', 'warning');
+      addEvent('AIS feed fetch failed — backend may be offline', 'warning');
     }
 
+    // Prime suspect
     try {
       const ps = await getPrimeSuspect();
       setPrimeSuspect(ps);
       if (ps.attribution_score != null) {
-        addEvent(`Prime suspect identified: ${ps.name} (${ps.attribution_score.toFixed(1)}/100)`, 'danger');
+        addEvent(
+          `Prime suspect: ${ps.name} — attribution ${ps.attribution_score.toFixed(1)}/100 [${ps.risk_level || 'HIGH'}]`,
+          'danger'
+        );
       }
     } catch {
-      // silent
+      // silent — not all backends return this
     }
 
-    const [spill, marine, wind] = await Promise.allSettled([getSpillDetection(), getMarineStatus(), getWindStatus()]);
-    if (spill.status === 'fulfilled') setSpillDetection(spill.value);
+    // Parallel: spill, marine, wind
+    const [spill, marine, wind] = await Promise.allSettled([
+      getSpillDetection(),
+      getMarineStatus(),
+      getWindStatus(),
+    ]);
+    if (spill.status === 'fulfilled') {
+      setSpillDetection(spill.value);
+      if (spill.value.sar_loaded) {
+        addEvent(`SAR spill detection ready — file: ${spill.value.file || 'sentinel1_sar.tiff'}`, 'info');
+      }
+    }
     if (marine.status === 'fulfilled') setMarineStatus(marine.value);
     if (wind.status === 'fulfilled') setWindStatus(wind.value);
+
     setLoading(false);
   }, [addEvent]);
 
   useEffect(() => {
     fetchAll();
+    // Retry once after 3s to handle slow backend startup
     const initRetry = setTimeout(fetchAll, 3000);
 
+    // Lightweight health ping every 8s
     const healthInterval = setInterval(async () => {
       try {
         const h = await getHealth();
@@ -110,12 +134,13 @@ export function useDashboardData(): DashboardData {
       }
     }, 8000);
 
+    // Full data refresh every 60s
     const dataInterval = setInterval(() => {
       fetchAll();
-    const initRetry = setTimeout(fetchAll, 3000);
     }, 60000);
 
     return () => {
+      clearTimeout(initRetry);
       clearInterval(healthInterval);
       clearInterval(dataInterval);
     };

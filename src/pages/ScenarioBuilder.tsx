@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Badge } from '@/components/Badge';
 import { PanelHeader } from '@/components/Panel';
-import { API_BASE } from '@/lib/api';
+import { API_BASE, getVessels } from '@/lib/api';
 import {
   FlaskConical,
   Ship,
@@ -60,11 +60,8 @@ const LON_MAX = 105.0;
 const lonToX = (lon: number) => ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * MAP_W;
 const latToY = (lat: number) => MAP_H - ((lat - LAT_MIN) / (LAT_MAX - LAT_MIN)) * MAP_H;
 
-const fallbackShips: Omit<ScenarioVessel, 'id'>[] = [
-  { name: 'VESSEL A', mmsi: '567001234', lat: 1.25, lon: 103.8, speed: 10.4, heading: 88, anomaly: 1 },
-  { name: 'VESSEL B', mmsi: '567002345', lat: 1.45, lon: 104.2, speed: 14.2, heading: 245, anomaly: 1 },
-  { name: 'VESSEL C', mmsi: '567003456', lat: 1.15, lon: 103.5, speed: 12.0, heading: 45, anomaly: 1 },
-];
+// Real anomalous vessels loaded from backend on mount
+const fallbackShips: Omit<ScenarioVessel, 'id'>[] = [];
 
 const API_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -91,9 +88,58 @@ export function ScenarioBuilder() {
 
   const nextId = useCallback(() => `ship-${++shipIdRef.current}`, []);
 
+  // Load real anomalous vessels from backend on mount
+  useEffect(() => {
+    getVessels()
+      .then((res) => {
+        const anomalous = (res.vessels || [])
+          .filter((v) => v.is_anomaly)
+          .slice(0, 5);
+        if (anomalous.length > 0) {
+          setShips(
+            anomalous.map((v) => ({
+              id: nextId(),
+              name: v.name,
+              mmsi: v.mmsi,
+              lat: v.lat,
+              lon: v.lon,
+              speed: v.speed,
+              heading: v.heading,
+              anomaly: 1,
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        // Backend offline — user can add vessels manually
+      });
+  }, []);
+
   const loadFallback = () => {
-    setShips(fallbackShips.map((s) => ({ ...s, id: nextId() })));
-    setUsingFallback(true);
+    getVessels()
+      .then((res) => {
+        const anomalous = (res.vessels || [])
+          .filter((v) => v.is_anomaly)
+          .slice(0, 5);
+        if (anomalous.length > 0) {
+          setShips(
+            anomalous.map((v) => ({
+              id: nextId(),
+              name: v.name,
+              mmsi: v.mmsi,
+              lat: v.lat,
+              lon: v.lon,
+              speed: v.speed,
+              heading: v.heading,
+              anomaly: 1,
+            }))
+          );
+          setUsingFallback(true);
+        }
+      })
+      .catch(() => {
+        setUsingFallback(false);
+      });
   };
 
   const addShip = () => {
