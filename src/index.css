@@ -126,6 +126,48 @@
   --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+[data-theme="pink"] {
+  --bg-space: #0d0611;
+  --bg-space-deep: #08030b;
+  --bg-card: rgba(26, 12, 32, 0.82);
+  --bg-card-solid: #170b1d;
+  --bg-card-hover: rgba(38, 18, 46, 0.92);
+  --bg-input: rgba(22, 10, 28, 0.85);
+  --bg-header: rgba(13, 6, 17, 0.9);
+  --bg-sidebar: rgba(13, 6, 17, 0.94);
+  --bg-panel: #1a0c20;
+  --bg-badge: rgba(244, 114, 182, 0.16);
+  --border-glass: rgba(244, 114, 182, 0.18);
+  --border-glass-hover: rgba(244, 114, 182, 0.5);
+  --border-accent: rgba(236, 72, 153, 0.55);
+  --border-light: rgba(244, 114, 182, 0.22);
+  --text-main: #ffffff;
+  --text-muted: #f472b6;
+  --text-dim: #d197b8;
+  --text-inverse: #0d0611;
+  --accent: #ec4899;
+  --accent-light: #f472b6;
+  --accent-dark: #db2777;
+  --accent-glow: rgba(236, 72, 153, 0.35);
+  --cyan: #f43f5e;
+  --cyan-glow: rgba(244, 63, 94, 0.25);
+  --amber: #fb7185;
+  --red: #f43f5e;
+  --blue: #e879f9;
+  --glass-blur: 16px;
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 9999px;
+  --shadow-card: 0 16px 36px -10px rgba(236, 72, 153, 0.25);
+  --shadow-glow: 0 0 26px rgba(236, 72, 153, 0.3);
+  --shadow-btn: 0 4px 14px rgba(236, 72, 153, 0.45);
+  --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -739,4 +781,70 @@
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: rgba(15, 23, 42, 0.15) !important;
+}
+
+
+/* Theme Overrides for Pink Mode */
+[data-theme="pink"] body {
+  background-color: #0d0611 !important;
+  background-image: 
+    radial-gradient(ellipse at 25% 15%, rgba(236, 72, 153, 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 75% 85%, rgba(244, 114, 182, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(26, 12, 32, 0.8) 0%, #0d0611 100%) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="pink"] .bg-\[\#060B10\] {
+  background-color: #0d0611 !important;
+}
+
+[data-theme="pink"] .bg-\[\#060B10\]\/80,
+[data-theme="pink"] .bg-\[\#060B10\]\/85 {
+  background-color: rgba(13, 6, 17, 0.9) !important;
+}
+
+[data-theme="pink"] .border-white\/\[0\.08\],
+[data-theme="pink"] .border-white\/\[0\.06\],
+[data-theme="pink"] .border-white\/\[0\.15\] {
+  border-color: rgba(244, 114, 182, 0.18) !important;
+}
+
+[data-theme="pink"] .glass-panel {
+  background: rgba(26, 12, 32, 0.85) !important;
+  border-color: rgba(244, 114, 182, 0.22) !important;
+  box-shadow: 0 10px 30px -5px rgba(236, 72, 153, 0.15) !important;
+}
+
+[data-theme="pink"] .glass-solid {
+  background: #170b1d !important;
+  border-color: rgba(244, 114, 182, 0.22) !important;
+}
+
+[data-theme="pink"] .btn-sat-primary {
+  background: #ec4899 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.45) !important;
+}
+
+[data-theme="pink"] .btn-sat-primary:hover {
+  background: #db2777 !important;
+  box-shadow: 0 6px 18px rgba(236, 72, 153, 0.6) !important;
+}
+
+[data-theme="pink"] .btn-sat-ghost {
+  border-color: rgba(244, 114, 182, 0.25) !important;
+  color: #fbcfe8 !important;
+}
+
+[data-theme="pink"] .btn-sat-ghost:hover {
+  border-color: #ec4899 !important;
+  background: rgba(236, 72, 153, 0.15) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="pink"] .nav-item-active {
+  color: #ffffff !important;
+  background: rgba(236, 72, 153, 0.2) !important;
+  border: 1px solid rgba(236, 72, 153, 0.5) !important;
+  box-shadow: 0 0 16px rgba(236, 72, 153, 0.25) !important;
 }

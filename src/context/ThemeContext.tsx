@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type Theme = 'default' | 'black' | 'white';
+export type Theme = 'default' | 'black' | 'white' | 'pink';
 
 interface ThemeContextType {
   theme: Theme;
@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as Theme;
-      if (saved === 'black' || saved === 'white' || saved === 'default') {
+      if (saved === 'black' || saved === 'white' || saved === 'default' || saved === 'pink') {
         return saved;
       }
     } catch {
@@ -46,6 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState((curr) => {
       if (curr === 'default') return 'black';
       if (curr === 'black') return 'white';
+      if (curr === 'white') return 'pink';
       return 'default';
     });
   };
